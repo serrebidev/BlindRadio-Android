@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -20,29 +21,39 @@ object Native {
 class EngineError(message: String) : Exception(message)
 
 /**
- * The one engine for the process, shared by the screen and the playback service.
- * Every call runs on the main thread: the Rust audio output must stay on one thread.
+ * The one engine for the process, shared by the screen, the playback service and
+ * the schedule alarm. Every call runs on the main thread: the Rust audio output must
+ * stay on one thread.
  */
 // Only the application context is kept: no activity leaks.
 @SuppressLint("StaticFieldLeak")
 object Engine {
     private const val POLL_MS = 100L
+    private const val ALARM_SYNC_MS = 60_000L
     private var handle = 0L
     private var app: Context? = null
     private val main = Handler(Looper.getMainLooper())
     private var polling = false
+    private var lastAlarmSync = 0L
 
     /** The screen is showing: keep polling even while stopped. */
     var visible = false
         set(v) { field = v; if (v) schedule() }
 
-    /** Events for the screen: `say`, `search`, `browse`, `lists`, `state`. */
+    /** Events for the screen: `say`, `title`, `saved`, `search`, `browse`, `lists`, `state`... */
     var listener: ((JSONObject) -> Unit)? = null
 
     /** The station playing (or connecting), and the line that says what is on. */
     var playing: JSONObject? = null
         private set
     var line = ""
+        private set
+    /** A recording runs with nothing playing (a schedule): the service stays up for it. */
+    var busy = false
+        private set
+
+    /** The settings as last saved, for the screen's own choices (announce actions, dial). */
+    var settings = JSONObject()
         private set
 
     /** Null on success, else why the engine could not start. */
@@ -51,7 +62,7 @@ object Engine {
         app = context.applicationContext
         return try {
             handle = Native.init(context.applicationContext, context.filesDir.path.toByteArray())
-            if (handle == 0L) "no audio output" else null
+            if (handle == 0L) "no audio output" else { reloadSettings(); null }
         } catch (e: Throwable) {
             e.message ?: e.toString()
         }
@@ -71,6 +82,21 @@ object Engine {
         return reply.opt("ok").takeUnless { it == JSONObject.NULL }
     }
 
+    /** A command whose reply is messages: they go to the screen like poll events. */
+    fun run(op: String, arg: Any? = null) {
+        (call(op, arg) as? JSONArray)?.let { a -> a.objects().forEach { listener?.invoke(it) } }
+        schedule()
+    }
+
+    fun reloadSettings() { settings = call("settings") as JSONObject }
+
+    fun saveSettings(s: JSONObject) {
+        call("set_settings", s)
+        reloadSettings()
+    }
+
+    fun flag(name: String) = settings.optBoolean(name, true)
+
     fun schedule() {
         if (polling || handle == 0L) return
         polling = true
@@ -80,26 +106,36 @@ object Engine {
     private fun tick() {
         polling = false
         val r = call("poll") as JSONObject
-        val events: JSONArray = r.getJSONArray("events")
-        for (i in 0 until events.length()) listener?.invoke(events.getJSONObject(i))
+        r.getJSONArray("events").objects().forEach { listener?.invoke(it) }
         val now = r.optJSONObject("playing")
         val newLine = r.getString("line")
-        val changed = now?.optString("id") != playing?.optString("id") || newLine != line
-        val wasPlaying = playing != null
+        val newBusy = r.optBoolean("busy")
+        val changed = now?.optString("id") != playing?.optString("id") || newLine != line || newBusy != busy
+        val wasUp = playing != null || busy
         playing = now
         line = newLine
+        busy = newBusy
         val ctx = app
-        if (ctx != null && now != null && !wasPlaying) {
-            ctx.startForegroundService(Intent(ctx, PlaybackService::class.java))
+        if (ctx != null && (now != null || newBusy) && !wasUp) {
+            try {
+                ctx.startForegroundService(Intent(ctx, PlaybackService::class.java))
+            } catch (_: Exception) {
+                // Android 12+ refuses a start from the background (an inexact alarm): play on regardless.
+            }
         }
         if (changed) {
             PlaybackService.instance?.update()
             listener?.invoke(JSONObject().put("k", "state"))
         }
-        if (visible || now != null) schedule()
+        val t = SystemClock.uptimeMillis()
+        if (ctx != null && t - lastAlarmSync > ALARM_SYNC_MS) {
+            lastAlarmSync = t
+            Alarms.sync(ctx)
+        }
+        if (visible || now != null || newBusy) schedule()
     }
 
-    fun toggle() { call("toggle"); schedule() }
+    fun toggle() = run("toggle")
 
-    fun stop() { call("stop"); schedule() }
+    fun stop() = run("stop")
 }

@@ -8,8 +8,8 @@ android {
         // Android 10 (TV and phone) through Android 17.
         minSdk = 29
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
     }
     ndkVersion = "27.3.13750724"
@@ -33,4 +33,9 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     )
     doFirst { environment("ANDROID_NDK_HOME", ndk.get().asFile.absolutePath) }
 }
-tasks.named("preBuild") { dependsOn(cargoNdk) }
+// Help and What's New read the repo's README and CHANGELOG, copied in at build time.
+val docs = tasks.register<Copy>("docs") {
+    from("../README.md", "../CHANGELOG.md")
+    into("src/main/assets")
+}
+tasks.named("preBuild") { dependsOn(cargoNdk, docs) }

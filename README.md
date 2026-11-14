@@ -2,42 +2,117 @@
 
 Screen-reader-first internet radio for Android phones, tablets and Android TV
 (Android 10 to Android 17). The same engine as [BlindRadio for desktop](https://git.serrebiradio.com/serrebi/blindradio):
-the same directories, the same gapless station changes with tuning hiss, the same song titles.
+the same directories, gapless station changes with tuning hiss, song titles,
+time-shift, recording, the equalizer and scheduled recordings.
 
 ## Tuning like a dial
 
 Landing on a station plays it. With TalkBack, swipe right or left through the
 list, or touch a station: each one you land on tunes in, and its song is spoken
-when it settles. On Android TV, arrow up and down with the remote. Without a
-screen reader, tap a station to play it.
+when it settles. On Android TV, arrow up and down with the remote, or use the
+channel keys. Without a screen reader, tap a station to play it.
 
-Double tap (or press OK, or tap) the station playing to stop it, and again to play it.
+Turn this off in Settings, General, "Play a station as I move to it": moving then
+only selects, and a double tap (or OK, or a tap) plays.
+
+Double tap the station playing to pause it, and again to resume. With the
+time-shift buffer on (the default) pause holds the stream: resume picks up
+where you left off.
 
 ## Actions instead of buttons
 
-Each station carries its own actions. With TalkBack, open TalkBack's Actions
-menu on the station. Without TalkBack, long press the station (or hold OK on a
-TV remote).
+Each row carries its own actions. With TalkBack, open TalkBack's Actions menu on
+it. Without TalkBack, long press it (or hold OK on a TV remote).
+
+A station's actions:
 
 - Add to Favorites, or Remove from Favorites
+- Add to list: any of your lists or their folders
 - Station details: genre, country, format, what is playing, address
-- Delete from this list (on the main list)
+- Song history: what the station played lately
+- Open homepage, Copy stream address
+- Edit station (name, address, info), for stations in your lists
+- Station sound: this station's own equalizer, audio channels, song title delay, and song recognition
+- Schedule recording or alarm
+- Copy, Cut, Paste here, Move up, Move down, Delete (in your lists)
 
-The screen has three buttons:
+A folder's actions: Open, New folder, Paste into this folder, Rename, Move up,
+Move down, Delete, Export as playlist file. In All Lists each list is a row with
+Show this list on the main screen, Rename, Move up, Move down, Delete and Export.
 
-- Lists: pick which list the main screen shows (Favorites, All Lists, SerrebiRadio,
-  Custom Stations), add a station by its address, or fetch the SerrebiRadio list again.
-- Search: every directory at once, by station name.
-- Browse: Radio Browser, TuneIn, iHeartRadio, SHOUTcast, Icecast, Live365 and the rest, folder by folder.
+The now-playing line at the top is a control too. Double tap it to pause or play.
+Its TalkBack actions (or a long press) are the player: Stop, Back and Forward,
+Go live, Previous and Next station, Volume up and down, Mute, Record, Song
+history, and Say what is playing.
+
+## The four buttons
+
+- Lists: pick which list the main screen shows (Favorites, Recent, All Lists,
+  SerrebiRadio, Custom Stations, your own lists). Also New list, Add station by
+  address, Import playlist file, and Get the SerrebiRadio list.
+- Search: every directory at once, by station name. Menu, Search filters adds
+  genre, country, language and sort.
+- Browse: Radio Browser, TuneIn, iHeartRadio, SHOUTcast, Icecast, Live365 and the
+  rest, folder by folder. Menu, Sort changes a directory's order.
+- Menu: everything else, below.
 
 Back goes up one level. Playback keeps going with the screen off or in another
-app; the notification, a headset button or the TV remote's play key stops it.
+app; the notification, a headset button or the TV remote's media keys control it.
+
+## Menu
+
+- Player: the same commands as the now-playing line.
+- Time-shift: Pause or resume, Back and Forward by the seek step, Start of buffer,
+  Go live, Previous and Next song in the buffer.
+- Recording: Record or Stop recording, Pause recording, Record songs as separate
+  files, Save the whole buffer, Save this song, Save the previous song, Save every
+  song in the buffer, and Where are my recordings. Recordings go to Music/BlindRadio
+  (on Android 10, the app's own Music folder), where file and music apps find them.
+- Sound: Volume (a slider TalkBack moves with swipes up and down), Mute, the
+  Equalizer (presets and ten bands), Audio channels (stereo, mono, left, right),
+  and the Sleep timer.
+- This list: Filter this list, Go to the playing station, New folder, Paste here,
+  New list, Import playlist file, Export as playlist file.
+- Scheduled recordings: each one a row; its actions turn it on or off or delete it.
+  Schedule new ones from a station's actions. A schedule starts BlindRadio by itself
+  at its time, records in the background without interrupting what you hear, and
+  stops when its time is up. An alarm plays the station instead.
+- Settings, Check for updates, Help, What's new, About.
+
+## Settings
+
+General: Play a station as I move to it; Announce song titles; Announce
+connection status; Announce actions; Close Browse and Search when a station
+plays; Play the last station at startup; Show every station of a list in one
+list (off: lists open as their folders, to walk into); Check for updates every
+day; Report plays to Radio Browser.
+
+Playback: FM sound between stations; Audio channels; Start buffer; Refill limit
+after dropouts; HLS segments behind live; Time-shift buffer on or off, its
+minutes (5 by default on Android: each minute holds about 11 MB of memory) and
+the seek step.
+
+Recording: format (as the station sends it, MP3, WAV, FLAC), MP3 bitrate and
+variable bitrate, Record songs as separate files, and the recordings folder.
+
+Songs: song recognition with AudD for stations that send no titles (paste an
+AudD token from audd.io), and scrobbling to ListenBrainz or Last.fm.
+
+Directories: turn any directory off; it leaves Browse and Search.
+
+## Keys
+
+On a TV remote or a keyboard: Play/Pause, Stop, Rewind and Fast forward (seek),
+Previous and Next (station), Record, Channel up and down (the dial), Menu. A letter
+key in a list jumps to the next row starting with it.
 
 ## Install
 
 Download `BlindRadio-Android-vX.Y.Z.apk` from the
 [releases](https://git.serrebiradio.com/serrebi/BlindRadio-Android/releases) and open it.
-One APK runs on 32-bit and 64-bit ARM: phones, tablets and TVs.
+One APK runs on 32-bit and 64-bit ARM: phones, tablets and TVs. Check for updates
+in Menu downloads and installs new releases (allow BlindRadio to install apps
+the first time).
 
 ## Building
 

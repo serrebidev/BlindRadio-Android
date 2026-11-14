@@ -5,7 +5,9 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 
 ## Layout
 - `native/` = Rust cdylib `libblindradio_android.so`. JNI by hand: own fn-table slot numbers (jni.h order), no jni crate. Two calls: `init`, `call(op, json) -> json`. UTF-8 byte arrays both ways, never jstring (modified UTF-8 breaks emoji).
-- `app/` = Kotlin, framework Views only, no androidx. `Engine.kt` = JNI + 100 ms poll. `MainActivity.kt` = one screen, screen stack (main list, Browse, Search). `PlaybackService.kt` = foreground service, MediaSession, audio focus, wake + wifi lock.
+- `native/src/lib.rs` = Core: playback, time-shift, recording, schedules, settings, sources ops. `lists.rs` = library ops. Place = `{"list", "path"}`.
+- `app/` = Kotlin, framework Views only, no androidx. `Engine.kt` = JNI + 100 ms poll + settings cache. `MainActivity.kt` = one screen, screen stack (main/level/Browse/Search/Filter/Schedules), row actions, Menu. `SettingsActivity.kt` = form from settings JSON paths. `Ui.kt` = dialogs, Form. `Alarms.kt` = schedule alarm + boot rearm. `Updater.kt` = Forgejo latest + sha256 + PackageInstaller. `PlaybackService.kt` = foreground service, MediaSession, audio focus (only when playing), wake + wifi lock.
+- `app/src/debug` = DebugReceiver, debug builds only: `adb shell am broadcast -n dev.serrebi.blindradio/.DebugReceiver --es op X --es arg JSON`, result in logcat tag BRDBG. Tap-driving dialogs over adb is racy: use this.
 - Core change needed = commit to blindradio main first, then `cargo update` here.
 
 ## Build and test
@@ -22,6 +24,10 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 - Rebind visible rows in place on play change. `notifyDataSetChanged` moves TalkBack.
 - All engine calls on main thread. Core `Output` is not Send.
 - Output paused while nothing plays (`Output::set_paused`): AAudio running = phone never sleeps.
+- Time-shift default 5 min on Android (first run only): ~11 MB/min RAM, TV has 2 GB.
+- New player command = `playerCommands()` (now-line actions) and Menu. New row command = `stationActions`/`libActions`. Max 20 actions per node (act_0..19).
+- Recordings: Music/BlindRadio on 11+ (direct file path ok for own media), app music dir on 10. `saved` event = MediaScanner.
+- Schedules: exact alarm only (USE_EXACT_ALARM 33+, SCHEDULE_EXACT_ALARM 31-32). Inexact alarm = FGS start DENIED from background, recording dies with process. Proven 2026-11-14 tablet.
 - Deps never pinned (`*`). `cargo update` before release.
 
 ## Traps
@@ -30,10 +36,12 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 - cpal device list needs `ndk_context` set, else panic. `init` does it with the app context.
 - jni-sys 0.3 vs 0.4 = different table shape, cargo flips between them: why slots are hand-numbered. New JNI call = check its slot in jni.h.
 - adb `input keyevent` skips TalkBack. Owner tablet runs Backtalk.
+- parking_lot_core 0.10 tries futex_time64 first on 32-bit; Android 10 seccomp = SIGSYS kill (syscall 422), not ENOSYS. Patched copy `native/patches/parking_lot_core` via `[patch.crates-io]`. New parking_lot_core version = recopy + re-apply the android arm. Crash only on lock contention: rapid dial on armv7 TV shows it.
 - AGP 9: `android.ndkDirectory` gone. Use `androidComponents.sdkComponents.ndkDirectory`.
 
 ## Release
-- Bump `versionCode` + `versionName` in `app/build.gradle.kts`, `CHANGELOG.md` `## X`.
+- Bump `versionCode` + `versionName` in `app/build.gradle.kts`, `CHANGELOG.md` `## X`. README = in-app Help, CHANGELOG = What's new (copied to assets at build): keep both current.
+- In-app updater picks the first `.apk` asset of releases/latest and checks `.apk.sha256`. Keep exactly one APK per release.
 - Versions stay 0.x: feature +0.1.0, fix +0.0.1. versionCode only rises.
 - Signed with `~/.android/debug.keystore` (cert e686d194...bf10ca), same as owner's other apps. Other key = update fails on devices.
 - Forgejo `serrebi/BlindRadio-Android`: tag vX.Y.Z, release, assets `BlindRadio-Android-vX.Y.Z.apk` + `.apk.sha256`. Stable, not prerelease. GitHub mirror syncs itself.

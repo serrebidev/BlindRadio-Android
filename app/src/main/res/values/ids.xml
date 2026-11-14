@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Custom TalkBack actions on a list row, in menu order. -->
+    <!-- Custom TalkBack actions on a list row or the now-playing line, in menu order. -->
     <item name="act_0" type="id"/>
     <item name="act_1" type="id"/>
     <item name="act_2" type="id"/>
     <item name="act_3" type="id"/>
     <item name="act_4" type="id"/>
     <item name="act_5" type="id"/>
+    <item name="act_6" type="id"/>
+    <item name="act_7" type="id"/>
+    <item name="act_8" type="id"/>
+    <item name="act_9" type="id"/>
+    <item name="act_10" type="id"/>
+    <item name="act_11" type="id"/>
+    <item name="act_12" type="id"/>
+    <item name="act_13" type="id"/>
+    <item name="act_14" type="id"/>
+    <item name="act_15" type="id"/>
+    <item name="act_16" type="id"/>
+    <item name="act_17" type="id"/>
+    <item name="act_18" type="id"/>
+    <item name="act_19" type="id"/>
 </resources>

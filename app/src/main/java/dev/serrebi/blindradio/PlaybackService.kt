@@ -35,6 +35,9 @@ class PlaybackService : Service() {
     private lateinit var session: MediaSession
     private lateinit var audio: AudioManager
     private var focus: AudioFocusRequest? = null
+    /** Focus is asked for only once something plays: a scheduled recording is silent. */
+    private var focused = false
+    private val created = android.os.SystemClock.uptimeMillis()
     private var wake: PowerManager.WakeLock? = null
     private var wifi: WifiManager.WifiLock? = null
     /** Lost to a call or another app for a moment: play again when it gives focus back. */
@@ -82,7 +85,6 @@ class PlaybackService : Service() {
             }
             .build()
         focus = request
-        audio.requestAudioFocus(request)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -105,7 +107,7 @@ class PlaybackService : Service() {
         )
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_radio)
-            .setContentTitle(Engine.playing?.optString("name") ?: getString(R.string.app_name))
+            .setContentTitle(Engine.playing?.optString("name") ?: getString(if (Engine.busy) R.string.recording else R.string.app_name))
             .setContentText(Engine.line)
             .setContentIntent(open)
             .setOngoing(true)
@@ -117,7 +119,14 @@ class PlaybackService : Service() {
     /** Follows the engine: new station or title, or stopped (then the service ends). */
     fun update() {
         val st = Engine.playing
-        if (st == null && !resume) {
+        if (st != null && !focused) focus?.let { focused = audio.requestAudioFocus(it) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED }
+        if (st == null && !resume && !Engine.busy) {
+            // Woken by a schedule's alarm: give the engine's first checks time to start it.
+            val age = android.os.SystemClock.uptimeMillis() - created
+            if (age < 5000) {
+                android.os.Handler(mainLooper).postDelayed({ instance?.update() }, 5000 - age)
+                return
+            }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return
