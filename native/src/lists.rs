@@ -30,6 +30,14 @@ fn place_json(list: &str, path: &[usize]) -> Value {
 	json!({ "list": list, "path": path })
 }
 
+fn dest(p: &Place) -> Option<StationDest> {
+	match p.list.as_str() {
+		RECENT | ALL => None,
+		FAVORITES => Some(StationDest::Favorites(p.path.clone())),
+		id => Some(StationDest::Collection { id: id.to_string(), path: p.path.clone() }),
+	}
+}
+
 fn all_in(stations: &[Station], folders: &[Folder]) -> Vec<Station> {
 	let mut out = stations.to_vec();
 	for f in folders {
@@ -233,6 +241,24 @@ impl Core {
 					&& let Some(v) = self.stations_mut(from)
 				{
 					v.insert((*i).min(v.len()), back);
+				}
+				self.save_library();
+				json!(added)
+			}
+			// A whole folder, everything under it, copied or moved into another list or folder.
+			"folder_paste" => {
+				let (from, to, cut) = (Place::of(&arg["from"])?, place()?, arg["cut"].as_bool().unwrap_or(false));
+				if from.list == to.list && to.path.starts_with(&from.path) {
+					return Err("a folder cannot go inside itself".into());
+				}
+				let (src, dst) = (dest(&from).ok_or("cannot copy from here")?, dest(&to).ok_or("cannot paste here")?);
+				let folder = self.library.folder_snapshot(&src).ok_or("no such folder")?;
+				let added = self.library.add_folder_to(&dst, folder).is_some();
+				if added && cut {
+					match from.list.as_str() {
+						FAVORITES => self.library.remove_fav_folder(&from.path),
+						id => self.library.collection_mut(id).is_some_and(|c| c.remove_folder(&from.path)),
+					};
 				}
 				self.save_library();
 				json!(added)

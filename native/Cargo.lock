@@ -148,7 +148,7 @@ dependencies = [
 [[package]]
 name = "blindradio-core"
 version = "0.2.95"
-source = "git+https://git.serrebiradio.com/serrebi/blindradio?branch=main#d6c41579248865036e226089e3f0a111515382ff"
+source = "git+https://git.serrebiradio.com/serrebi/blindradio?branch=main#309cd01e6bc96ba837b69bbc905bd72619dcff50"
 dependencies = [
  "aes",
  "base64",

@@ -27,6 +27,7 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 - Time-shift default 5 min on Android (first run only): ~11 MB/min RAM, TV has 2 GB.
 - New player command = `playerCommands()` (now-line actions) and Menu. New row command = `stationActions`/`libActions`. Max 20 actions per node (act_0..19).
 - Recordings: Music/BlindRadio on 11+ (direct file path ok for own media), app music dir on 10. `saved` event = MediaScanner.
+- YouTube, Twitch: core `live_direct.rs` (cfg android in `live::lookup`). Nothing in this repo. Breaks = update its client version / Twitch query hash from yt-dlp `_base.py` / streamlink `twitch.py`. GPL extractors (NewPipeExtractor, rustypipe, youtubedl-android) rejected: app MIT.
 - Schedules: exact alarm only (USE_EXACT_ALARM 33+, SCHEDULE_EXACT_ALARM 31-32). Inexact alarm = FGS start DENIED from background, recording dies with process. Proven 2026-11-14 tablet.
 - Deps never pinned (`*`). `cargo update` before release.
 

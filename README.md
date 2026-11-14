@@ -5,6 +5,11 @@ Screen-reader-first internet radio for Android phones, tablets and Android TV
 the same directories, gapless station changes with tuning hiss, song titles,
 time-shift, recording, the equalizer and scheduled recordings.
 
+YouTube and Twitch live streams play too: add a station by its link (Lists, Add
+station by address) and BlindRadio plays the stream's audio only. A video link,
+a channel's live page (youtube.com/@channel/live) and a Twitch channel
+(twitch.tv/channel) all work.
+
 ## Tuning like a dial
 
 Landing on a station plays it. With TalkBack, swipe right or left through the
@@ -36,8 +41,9 @@ A station's actions:
 - Schedule recording or alarm
 - Copy, Cut, Paste here, Move up, Move down, Delete (in your lists)
 
-A folder's actions: Open, New folder, Paste into this folder, Rename, Move up,
-Move down, Delete, Export as playlist file. In All Lists each list is a row with
+A folder's actions: Open, New folder, Paste into this folder, Copy folder, Cut
+folder, Paste folder into this folder, Rename, Move up, Move down, Delete, Export
+as playlist file. This list (in Menu) has Paste folder here too. In All Lists each list is a row with
 Show this list on the main screen, Rename, Move up, Move down, Delete and Export.
 
 The now-playing line at the top is a control too. Double tap it to pause or play.
@@ -49,7 +55,9 @@ history, and Say what is playing.
 
 - Lists: pick which list the main screen shows (Favorites, Recent, All Lists,
   SerrebiRadio, Custom Stations, your own lists). Also New list, Add station by
-  address, Import playlist file, and Get the SerrebiRadio list.
+  address, Detect streams on a web page (a station's site, or a YouTube or Twitch
+  link: the streams found are listed to play or file), Import playlist file, and
+  Get the SerrebiRadio list.
 - Search: every directory at once, by station name. Menu, Search filters adds
   genre, country, language and sort.
 - Browse: Radio Browser, TuneIn, iHeartRadio, SHOUTcast, Icecast, Live365 and the
@@ -69,7 +77,7 @@ app; the notification, a headset button or the TV remote's media keys control it
   song in the buffer, and Where are my recordings. Recordings go to Music/BlindRadio
   (on Android 10, the app's own Music folder), where file and music apps find them.
 - Sound: Volume (a slider TalkBack moves with swipes up and down), Mute, the
-  Equalizer (presets and ten bands), Audio channels (stereo, mono, left, right),
+  Equalizer (presets, ten bands, and presets of your own to save, apply and delete), Audio channels (stereo, mono, left, right),
   and the Sleep timer.
 - This list: Filter this list, Go to the playing station, New folder, Paste here,
   New list, Import playlist file, Export as playlist file.
@@ -90,7 +98,8 @@ day; Report plays to Radio Browser.
 Playback: FM sound between stations; Audio channels; Start buffer; Refill limit
 after dropouts; HLS segments behind live; Time-shift buffer on or off, its
 minutes (5 by default on Android: each minute holds about 11 MB of memory) and
-the seek step.
+the seek step. Or keep the buffer as the station sends it: hours of audio in a
+size you set (200 MB by default).
 
 Recording: format (as the station sends it, MP3, WAV, FLAC), MP3 bitrate and
 variable bitrate, Record songs as separate files, and the recordings folder.

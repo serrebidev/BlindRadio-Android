@@ -204,6 +204,20 @@
     <string name="lastfm_key">Last.fm API key</string>
     <string name="lastfm_secret">Last.fm secret</string>
     <string name="lastfm_session">Last.fm session key</string>
+    <string name="detect">Detect streams on a web page…</string>
+    <string name="page_address">Web page, YouTube or Twitch address</string>
+    <string name="no_streams">No streams found on that page</string>
+    <string name="streams_found">Streams found</string>
+    <string name="copy_folder">Copy folder</string>
+    <string name="cut_folder">Cut folder</string>
+    <string name="paste_folder">Paste folder here</string>
+    <string name="paste_folder_into">Paste folder into this folder</string>
+    <string name="saved_preset">Saved: %s</string>
+    <string name="save_preset">Save as preset…</string>
+    <string name="encoded_ring">Keep the buffer as the station sends it (much longer buffer, less memory)</string>
+    <string name="encoded_mb">That buffer\'s size in MB (0 = 200)</string>
+    <string name="delete_preset">Delete a saved preset…</string>
+    <string name="no_saved_presets">No saved presets</string>
     <plurals name="results">
         <item quantity="one">%d station</item>
         <item quantity="other">%d stations</item>

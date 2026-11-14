@@ -983,6 +983,64 @@ impl Core {
 				});
 				Value::Null
 			}
+			"detect" => {
+				// Detect Audio Stream on Page: a web page (or a YouTube or Twitch link) to its streams.
+				let (client, page) = (self.engine.ctx.client.clone(), arg.as_str().unwrap_or_default().to_string());
+				self.spawn(async move {
+					Done::Out(match blindradio_core::page::detect(&client, &page).await {
+						Ok(stations) => json!({ "k": "detected", "stations": stations }),
+						Err(e) => json!({ "k": "say", "text": e.to_string() }),
+					})
+				});
+				Value::Null
+			}
+			"eq_save" => {
+				let name = arg.as_str().unwrap_or_default().trim().to_string();
+				if name.is_empty() {
+					return Err("no name".into());
+				}
+				let eq = &mut self.settings.eq;
+				let saved = blindradio_core::settings::SavedEqPreset {
+					name: name.clone(),
+					bands: eq.bands,
+					preamp_db: eq.preamp_db,
+					preamp_enabled: eq.preamp_enabled,
+					..serde_json::from_value(json!({ "name": name })).map_err(|e| e.to_string())?
+				};
+				eq.saved.retain(|p| p.name != name);
+				eq.saved.push(saved);
+				eq.saved_name = Some(name);
+				self.save_settings();
+				Value::Null
+			}
+			"eq_delete" => {
+				let name = arg.as_str().unwrap_or_default();
+				let eq = &mut self.settings.eq;
+				eq.saved.retain(|p| p.name != name);
+				if eq.saved_name.as_deref() == Some(name) {
+					eq.saved_name = None;
+				}
+				self.save_settings();
+				Value::Null
+			}
+			"eq_apply_saved" => {
+				let name = arg.as_str().unwrap_or_default();
+				let eq = &mut self.settings.eq;
+				let p = eq.saved.iter().find(|p| p.name == name).cloned().ok_or("no such preset")?;
+				eq.bands = p.bands;
+				eq.preamp_db = p.preamp_db;
+				eq.preamp_enabled = p.preamp_enabled;
+				// Like the desktop: a saved preset becomes the Custom store too.
+				eq.custom_bands = p.bands;
+				eq.custom_preamp_db = p.preamp_db;
+				eq.custom_preamp_enabled = p.preamp_enabled;
+				eq.preset = EqPreset::Custom;
+				eq.saved_name = Some(p.name);
+				eq.enabled = true;
+				self.save_settings();
+				self.refresh_sound();
+				Value::Null
+			}
 			"filters" => {
 				let sources = self.sources.clone();
 				self.spawn(async move {

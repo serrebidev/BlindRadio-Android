@@ -108,6 +108,8 @@ class MainActivity : Activity() {
     private var shownPlaying: String? = null
     /** Copy or Cut: the station, and for a cut, where it is taken from. */
     private var clip: Pair<JSONObject, JSONObject?>? = null
+    /** Copy Folder or Cut Folder: where the folder is, and whether it moves. */
+    private var folderClip: Pair<JSONObject, Boolean>? = null
     private var filters: JSONObject? = null
     private var whenFilters: (() -> Unit)? = null
     private var exportText = ""
@@ -494,14 +496,15 @@ class MainActivity : Activity() {
     private fun chooseList() {
         val lists = (Engine.call("lists") as JSONArray).objects()
         val names = lists.map { it.getString("name") } + listOf(
-            getString(R.string.new_list), getString(R.string.add_station), getString(R.string.import_playlist), getString(R.string.get_starter),
+            getString(R.string.new_list), getString(R.string.add_station), getString(R.string.detect), getString(R.string.import_playlist), getString(R.string.get_starter),
         )
         choose(getString(R.string.lists), names) { which ->
             when (which - lists.size) {
                 0 -> newList()
                 1 -> addStation()
-                2 -> importPlaylist()
-                3 -> { say(getString(R.string.starter_loading)); Engine.call("starter"); Engine.schedule() }
+                2 -> detect()
+                3 -> importPlaylist()
+                4 -> { say(getString(R.string.starter_loading)); Engine.call("starter"); Engine.schedule() }
                 else -> setMain(lists[which].getString("id"))
             }
         }
@@ -541,6 +544,14 @@ class MainActivity : Activity() {
             .show()
     }
 
+    /** Detect Audio Stream on Page: a web page, or a YouTube or Twitch link, to its streams. */
+    private fun detect() = askText(getString(R.string.detect), getString(R.string.page_address), "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI) { url ->
+        if (url.isEmpty()) return@askText
+        say(getString(R.string.loading))
+        Engine.call("detect", url)
+        Engine.schedule()
+    }
+
     private fun onEvent(e: JSONObject) {
         when (e.getString("k")) {
             "say", "title" -> say(e.getString("text"))
@@ -564,6 +575,11 @@ class MainActivity : Activity() {
                 if (id == e.getString("id") && d.isShowing) d.setMessage(Engine.call("details_text", e.getJSONObject("station")) as String)
             }
             "filters" -> { filters = e; whenFilters?.invoke(); whenFilters = null }
+            "detected" -> {
+                val rows = stationsOf(e.optJSONArray("stations"))
+                say(if (rows.isEmpty()) getString(R.string.no_streams) else count(rows.size))
+                if (rows.isNotEmpty()) push(Screen(Kind.FILTER, getString(R.string.streams_found)).also { it.rows = rows })
+            }
             "search" -> {
                 val s = stack.lastOrNull { it.kind == Kind.SEARCH } ?: return
                 if (e.optInt("seq") != s.seq) return
@@ -689,11 +705,12 @@ class MainActivity : Activity() {
         if (Engine.call("in_library", s) == true) out += getString(R.string.edit_station) to { editStation(s) }
         out += getString(R.string.station_sound) to { stationSound(s) }
         out += getString(R.string.schedule) to { scheduleFor(s) }
-        out += getString(R.string.copy) to { clip = s to null; act(getString(R.string.copied)) }
+        out += getString(R.string.copy) to { clip = s to null; folderClip = null; act(getString(R.string.copied)) }
         val here = rowPlace()
         if (here != null && r.index >= 0) {
             out += getString(R.string.cut) to {
                 clip = s to JSONObject().put("place", here).put("index", r.index)
+                folderClip = null
                 act(getString(R.string.cut_done))
             }
             if (clip != null) out += getString(R.string.paste) to { paste(here) }
@@ -739,6 +756,9 @@ class MainActivity : Activity() {
         } else {
             out += getString(R.string.new_folder) to { newFolder(r.place) }
             if (clip != null) out += getString(R.string.paste_into) to { paste(r.place) }
+            out += getString(R.string.copy_folder) to { folderClip = r.place to false; clip = null; act(getString(R.string.copied)) }
+            out += getString(R.string.cut_folder) to { folderClip = r.place to true; clip = null; act(getString(R.string.cut_done)) }
+            if (folderClip != null) out += getString(R.string.paste_folder_into) to { pasteFolder(r.place) }
             out += getString(R.string.rename) to {
                 askText(getString(R.string.rename), getString(R.string.name), r.name) { n ->
                     Engine.call("folder_rename", JSONObject().put("place", r.place).put("name", n)); reload()
@@ -783,6 +803,18 @@ class MainActivity : Activity() {
         val added = Engine.call("paste", JSONObject().put("place", place).put("station", s).put("cut", cut ?: JSONObject.NULL)) == true
         if (added && cut != null) clip = null
         act(getString(if (added) R.string.pasted else R.string.already_there_plain))
+        reload()
+    }
+
+    private fun pasteFolder(to: JSONObject) {
+        val (from, cut) = folderClip ?: return
+        try {
+            val added = Engine.call("folder_paste", JSONObject().put("from", from).put("place", to).put("cut", cut)) == true
+            if (added && cut) folderClip = null
+            act(getString(if (added) R.string.pasted else R.string.already_there_plain))
+        } catch (e: EngineError) {
+            say(e.message ?: "")
+        }
         reload()
     }
 
@@ -1041,6 +1073,7 @@ class MainActivity : Activity() {
         if (here != null) {
             out += getString(R.string.new_folder) to { newFolder(here) }
             if (clip != null) out += getString(R.string.paste) to { paste(here) }
+            if (folderClip != null) out += getString(R.string.paste_folder) to { pasteFolder(here) }
         }
         out += getString(R.string.new_list) to { newList() }
         out += getString(R.string.import_playlist) to { importPlaylist() }
@@ -1123,10 +1156,16 @@ class MainActivity : Activity() {
         val sliders = ArrayList<SeekBar>()
         fun send() { Engine.call("eq", eq); Engine.reloadSettings() }
         on.setOnCheckedChangeListener { _, c -> eq.put("enabled", c); send() }
-        val presetName = { presets.firstOrNull { it.getString("id") == eq.optString("preset") }?.getString("name") ?: "" }
+        val saved = { eq.optJSONArray("saved")?.objects()?.map { it.getString("name") }.orEmpty() }
+        val presetName = {
+            eq.optString("saved_name").takeIf { it.isNotEmpty() && !eq.isNull("saved_name") }
+                ?: presets.firstOrNull { it.getString("id") == eq.optString("preset") }?.getString("name") ?: ""
+        }
         f.button("${getString(R.string.preset)}: ${presetName()}") { b ->
-            choose(getString(R.string.preset), presets.map { it.getString("name") }, presets.indexOfFirst { it.getString("id") == eq.optString("preset") }) { i ->
-                Engine.call("set_preset", presets[i].getString("id"))
+            val names = presets.map { it.getString("name") } + saved().map { getString(R.string.saved_preset, it) }
+            choose(getString(R.string.preset), names, presets.indexOfFirst { it.getString("id") == eq.optString("preset") }) { i ->
+                if (i < presets.size) Engine.call("set_preset", presets[i].getString("id"))
+                else Engine.call("eq_apply_saved", saved()[i - presets.size])
                 Engine.reloadSettings()
                 val fresh = Engine.settings.getJSONObject("eq")
                 fresh.keys().forEach { k -> eq.put(k, fresh.get(k)) }
@@ -1144,6 +1183,25 @@ class MainActivity : Activity() {
         }
         f.slider(getString(R.string.preamp), -12, 12, eq.optInt("preamp_db"), db) { v ->
             eq.put("preamp_db", v); eq.put("preamp_enabled", true); send()
+        }
+        f.button(getString(R.string.save_preset)) {
+            askText(getString(R.string.save_preset), getString(R.string.name)) { n ->
+                if (n.isEmpty()) return@askText
+                Engine.call("eq_save", n)
+                Engine.reloadSettings()
+                Engine.settings.optJSONObject("eq")?.let { fresh -> fresh.keys().forEach { k -> eq.put(k, fresh.get(k)) } }
+                act(getString(R.string.saved))
+            }
+        }
+        f.button(getString(R.string.delete_preset)) {
+            val names = saved()
+            if (names.isEmpty()) return@button say(getString(R.string.no_saved_presets))
+            choose(getString(R.string.delete_preset), names) { i ->
+                Engine.call("eq_delete", names[i])
+                Engine.reloadSettings()
+                Engine.settings.optJSONObject("eq")?.let { fresh -> fresh.keys().forEach { k -> eq.put(k, fresh.get(k)) } }
+                act(getString(R.string.deleted))
+            }
         }
         AlertDialog.Builder(this).setTitle(R.string.equalizer).setView(f.scroll).setPositiveButton(R.string.close, null).show()
     }

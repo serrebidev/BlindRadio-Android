@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- YouTube and Twitch live streams play: add a station by its link (a video, a channel's live page, a Twitch channel) and it plays the audio-only stream. No helper apps; a link that expires is looked up again on reconnect.
+- Detect streams on a web page (Lists): paste a station's page, or a YouTube or Twitch link, and play or file what it finds.
+- Folders copy, cut and paste whole, into another folder or list.
+- Equalizer: save your own presets, apply and delete them.
+- Settings: keep the time-shift buffer as the station sends it, for a much longer buffer in less memory.
+
 ## 0.2.0
 
 - Settings: every desktop setting that applies on Android, including "Play a station as I move to it" to turn off tuning on TalkBack swipes, touch and arrow keys.
