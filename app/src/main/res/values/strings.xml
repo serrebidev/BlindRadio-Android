@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BlindRadio</string>
+    <string name="lists">Lists</string>
+    <string name="search">Search</string>
+    <string name="browse">Browse</string>
+    <string name="search_hint">Station name</string>
+    <string name="stations">Stations</string>
+    <string name="play">Play</string>
+    <string name="stop">Stop</string>
+    <string name="open">Open</string>
+    <string name="load_more">Load more</string>
+    <string name="playing">Playing</string>
+    <string name="stopped">Stopped</string>
+    <string name="add_favorite">Add to Favorites</string>
+    <string name="remove_favorite">Remove from Favorites</string>
+    <string name="details">Station details</string>
+    <string name="delete">Delete from this list</string>
+    <string name="added_favorite">Added to Favorites</string>
+    <string name="removed_favorite">Removed from Favorites</string>
+    <string name="deleted">Deleted</string>
+    <string name="add_station">Add station by address…</string>
+    <string name="get_starter">Get the SerrebiRadio list</string>
+    <string name="name">Name</string>
+    <string name="address">Address</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="loading">Loading</string>
+    <string name="searching">Searching</string>
+    <string name="empty">Nothing here</string>
+    <plurals name="results">
+        <item quantity="one">%d station</item>
+        <item quantity="other">%d stations</item>
+    </plurals>
+    <string name="no_engine">The audio engine could not start: %s</string>
+    <string name="channel">Playback</string>
+    <string name="starter_loading">Getting the SerrebiRadio list</string>
+</resources>

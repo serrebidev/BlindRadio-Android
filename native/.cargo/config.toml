@@ -1,0 +1,4 @@
+# fdk-aac includes AOSP's log/log.h when __ANDROID__ is set; the NDK has none.
+# clang reads CPLUS_INCLUDE_PATH itself, so the stub needs no per-target flags.
+[env]
+CPLUS_INCLUDE_PATH = { value = "android-include", relative = true }

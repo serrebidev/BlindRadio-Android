@@ -1,0 +1,10 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+native/target/
+app/src/main/jniLibs/
+*.jks
+*.keystore
+captures/
+.superpowers/

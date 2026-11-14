@@ -1,0 +1,21 @@
+[package]
+name = "blindradio-android"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# The desktop repo is the engine's home; its main branch is what ships.
+blindradio-core = { git = "https://git.serrebiradio.com/serrebi/blindradio", branch = "main" }
+ndk-context = "*"
+serde_json = "*"
+parking_lot = "*"
+crossbeam-channel = "*"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true

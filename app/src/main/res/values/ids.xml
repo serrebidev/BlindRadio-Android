@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom TalkBack actions on a list row, in menu order. -->
+    <item name="act_0" type="id"/>
+    <item name="act_1" type="id"/>
+    <item name="act_2" type="id"/>
+    <item name="act_3" type="id"/>
+    <item name="act_4" type="id"/>
+    <item name="act_5" type="id"/>
+</resources>

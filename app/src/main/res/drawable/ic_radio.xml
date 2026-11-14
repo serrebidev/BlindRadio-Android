@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A radio: body, speaker grille, dial and aerial, inside the adaptive icon's safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M34,46 L74,46 Q78,46 78,50 L78,72 Q78,76 74,76 L34,76 Q30,76 30,72 L30,50 Q30,46 34,46 Z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:pathData="M40,46 L66,32" />
+    <path android:fillColor="#FF1A237E"
+        android:pathData="M45,61 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+    <path android:fillColor="#FF1A237E" android:pathData="M60,54 L72,54 L72,58 L60,58 Z" />
+    <path android:fillColor="#FF1A237E" android:pathData="M60,63 L72,63 L72,67 L60,67 Z" />
+</vector>
