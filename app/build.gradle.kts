@@ -27,6 +27,13 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
     workingDir = file("../native")
     // sccache spawns rustc without an argument file: the long link line fails on Windows.
     environment("RUSTC_WRAPPER", "")
+    // The core compiles OpenSSL in (old-TLS fallback). Its build wants a Unix perl with every
+    // core module, and Git for Windows' perl lacks some: MSYS2's perl and make go first.
+    val msys = file("C:/msys64/usr/bin")
+    if (msys.isDirectory) {
+        environment("PATH", msys.absolutePath + File.pathSeparator + System.getenv("PATH"))
+        environment("OPENSSL_SRC_PERL", File(msys, "perl.exe").absolutePath)
+    }
     commandLine(
         "cargo", "ndk", "-t", "armeabi-v7a", "-t", "arm64-v8a", "-P", "29",
         "-o", file("src/main/jniLibs").absolutePath, "build", "--release",

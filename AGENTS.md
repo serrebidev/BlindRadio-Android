@@ -15,6 +15,7 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 - Gate: `cd native && cargo test && cargo clippy --all-targets`, then `./gradlew lintDebug assembleRelease`.
 - Needs NDK 27.3.13750724, `cargo install cargo-ndk`, rustup targets armv7-linux-androideabi aarch64-linux-android. No x86_64: emulator only, +14 MB per install.
 - Owner TV = armeabi-v7a only, Android 10. Never drop armeabi-v7a.
+- Needs MSYS2 at `C:\msys64` with `pacman -S perl make`. Core compiles OpenSSL in (old-TLS fallback, `net.rs` LEGACY). Git perl lacks modules (Locale::Maketext::Simple, Pod::Usage), Strawberry perl writes `\` paths: both fail. `cargoNdk` puts MSYS2 first on PATH.
 
 ## Rules
 - Dial: landing on a station tunes it. TalkBack focus (`RowView.performAccessibilityAction` ACTION_ACCESSIBILITY_FOCUS), D-pad (`onItemSelected`). Click = play/stop toggle.

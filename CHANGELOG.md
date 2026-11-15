@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Stations on older secure servers play, such as Radio Koszalin (https://stream6.nadaje.com:8503/). They said "Unreachable" while VLC played them: their servers only speak an old kind of encryption, and BlindRadio now falls back to one that speaks it.
+
 ## 0.3.0
 
 - YouTube and Twitch live streams play: add a station by its link (a video, a channel's live page, a Twitch channel) and it plays the audio-only stream. No helper apps; a link that expires is looked up again on reconnect.
