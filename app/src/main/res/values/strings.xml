@@ -158,7 +158,7 @@
     <string name="any">Any</string>
     <string name="default_sort">Directory\'s own</string>
     <string name="search_now">Search now</string>
-    <string name="about_text">BlindRadio for Android %s\n\nThe BlindRadio engine, made for screen readers.\nMIT license.\nhttps://git.serrebiradio.com/serrebi/BlindRadio-Android</string>
+    <string name="about_text">BlindRadio for Android %s\n\nThe BlindRadio engine, made for screen readers.\nMIT license.\nhttps://git.serrebiradio.com/serrebi/BlindRadio-Android\n\nAuthor: serrebidev. GitHub: https://github.com/serrebidev/BlindRadio-Android. Projects: https://projects.serrebiradio.com. Telegram: https://t.me/SerrebiProjects. Full credits: CREDITS.md.</string>
     <string name="update_checking">Checking for updates</string>
     <string name="update_none">Up to date at %s</string>
     <string name="update_failed">Update check failed: %s</string>
