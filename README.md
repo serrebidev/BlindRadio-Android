@@ -5,6 +5,12 @@ Screen-reader-first internet radio for Android phones, tablets and Android TV
 the same directories, gapless station changes with tuning hiss, song titles,
 time-shift, recording, the equalizer and scheduled recordings.
 
+[![Join SerrebiProjects on Telegram](https://img.shields.io/badge/Telegram-SerrebiProjects-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/SerrebiProjects)
+
+**Questions, bugs, or release news?** Join the [SerrebiProjects Telegram group](https://t.me/SerrebiProjects), the fastest place to get help.
+
+More serrebi projects: [projects.serrebiradio.com](https://projects.serrebiradio.com)
+
 YouTube and Twitch live streams play too: add a station by its link (Lists, Add
 station by address) and BlindRadio plays the stream's audio only. A video link,
 a channel's live page (youtube.com/@channel/live) and a Twitch channel
@@ -133,3 +139,7 @@ for the engine first.
 ## License
 
 MIT.
+
+## Credits
+
+See [CREDITS.md](CREDITS.md) for where the ideas behind this project came from, and the third-party projects it builds on.
