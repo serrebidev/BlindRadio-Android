@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Help, About now lists every project link as its own button (GitHub, Forgejo, Projects, Telegram, Full credits), so a keyboard or a screen reader reaches each one instead of URLs buried in text.
+
 ## 0.3.1
 
 - Stations on older secure servers play, such as Radio Koszalin (https://stream6.nadaje.com:8503/). They said "Unreachable" while VLC played them: their servers only speak an old kind of encryption, and BlindRadio now falls back to one that speaks it.

@@ -8,8 +8,8 @@ android {
         // Android 10 (TV and phone) through Android 17.
         minSdk = 29
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.3.2"
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
     }
     ndkVersion = "27.3.13750724"
@@ -38,7 +38,21 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
         "cargo", "ndk", "-t", "armeabi-v7a", "-t", "arm64-v8a", "-P", "29",
         "-o", file("src/main/jniLibs").absolutePath, "build", "--release",
     )
-    doFirst { environment("ANDROID_NDK_HOME", ndk.get().asFile.absolutePath) }
+    // Forward slashes: OpenSSL's MSYS make runs the compiler through sh, which strips
+    // backslashes ("C:UsersadminAppData...: not found"). cargo-ndk always sets CC_/AR_ to
+    // paths joined with backslashes, so cargo's forced [env] overrides them for build scripts.
+    doFirst {
+        val home = ndk.get().asFile.absolutePath.replace('\\', '/')
+        environment("ANDROID_NDK_HOME", home)
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            val bin = "$home/toolchains/llvm/prebuilt/windows-x86_64/bin"
+            for (triple in listOf("armv7-linux-androideabi", "aarch64-linux-android")) {
+                for ((tool, exe) in listOf("CC" to "clang", "CXX" to "clang++", "AR" to "llvm-ar", "RANLIB" to "llvm-ranlib")) {
+                    args("--config", "env.${tool}_$triple.value=\"$bin/$exe.exe\"", "--config", "env.${tool}_$triple.force=true")
+                }
+            }
+        }
+    }
 }
 // Help and What's New read the repo's README and CHANGELOG, copied in at build time.
 val docs = tasks.register<Copy>("docs") {

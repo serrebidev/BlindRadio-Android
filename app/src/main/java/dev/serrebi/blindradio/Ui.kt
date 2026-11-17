@@ -99,6 +99,8 @@ class Form(private val ctx: Context) {
 
     fun number(label: String, start: Int) = text(label, start.toString(), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED)
 
+    fun para(text: String) = add(TextView(ctx).apply { this.text = text })
+
     fun button(label: String, onClick: (Button) -> Unit): Button = Button(ctx).apply {
         text = label
         setOnClickListener { onClick(this) }

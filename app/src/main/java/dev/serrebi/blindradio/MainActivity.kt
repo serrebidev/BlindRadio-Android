@@ -1210,7 +1210,19 @@ class MainActivity : Activity() {
 
     private fun about() {
         val v = packageManager.getPackageInfo(packageName, 0).versionName
-        showText(getString(R.string.about), getString(R.string.about_text, v))
+        // Every project link is its own button, so TalkBack and a keyboard
+        // reach it, instead of URLs inside the text.
+        val form = Form(this)
+        form.para(getString(R.string.about_text, v))
+        val repo = "https://git.serrebiradio.com/serrebi/BlindRadio-Android"
+        for ((label, url) in listOf(
+            R.string.about_github to "https://github.com/serrebidev/BlindRadio-Android",
+            R.string.about_forgejo to repo,
+            R.string.about_projects to "https://projects.serrebiradio.com",
+            R.string.about_telegram to "https://t.me/SerrebiProjects",
+            R.string.about_credits to "$repo/src/branch/main/CREDITS.md",
+        )) form.button(getString(label)) { openUrl(url) }
+        AlertDialog.Builder(this).setTitle(R.string.about).setView(form.scroll).setPositiveButton(R.string.close, null).show()
     }
 
     // ---- import, export ----
