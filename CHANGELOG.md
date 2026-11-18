@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.3
+
+- HLS stations that put commas in their song details, such as KCRW and iHeartRadio stations, no longer make BlindRadio request audio files that do not exist.
+- A song title containing a comma is no longer cut off at the comma on HLS stations.
+- HLS stations that send a segment number where the title goes no longer announce a new number every few seconds.
+- Daily and weekly alarms and scheduled recordings keep their clock time when daylight saving changes. An 8:00 alarm used to move to 7:00 or 9:00.
+- An HLS station whose encryption line is damaged is refused instead of playing noise.
+- The version number now matches BlindRadio for desktop.
+
 ## 0.3.2
 
 - Help, About now lists every project link as its own button (GitHub, Forgejo, Projects, Telegram, Full credits), so a keyboard or a screen reader reaches each one instead of URLs buried in text.

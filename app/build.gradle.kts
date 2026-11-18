@@ -8,8 +8,8 @@ android {
         // Android 10 (TV and phone) through Android 17.
         minSdk = 29
         targetSdk = 37
-        versionCode = 5
-        versionName = "0.3.2"
+        versionCode = 6
+        versionName = "0.3.3"
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
     }
     ndkVersion = "27.3.13750724"
@@ -48,7 +48,9 @@ val cargoNdk = tasks.register<Exec>("cargoNdk") {
             val bin = "$home/toolchains/llvm/prebuilt/windows-x86_64/bin"
             for (triple in listOf("armv7-linux-androideabi", "aarch64-linux-android")) {
                 for ((tool, exe) in listOf("CC" to "clang", "CXX" to "clang++", "AR" to "llvm-ar", "RANLIB" to "llvm-ranlib")) {
-                    args("--config", "env.${tool}_$triple.value=\"$bin/$exe.exe\"", "--config", "env.${tool}_$triple.force=true")
+                    // Single-quoted TOML literal string: ProcessBuilder and PowerShell
+                    // both strip embedded double quotes before cargo ever sees them.
+                    args("--config", "env.${tool}_$triple.value='$bin/$exe.exe'", "--config", "env.${tool}_$triple.force=true")
                 }
             }
         }
