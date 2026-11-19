@@ -103,6 +103,7 @@ jobs:
           case "$cert" in *e686d194*) ;; *) echo "APK not signed with the owner's key"; exit 1 ;; esac
           (cd dist && sha256sum "$apk" > "$apk.sha256")
           awk -v v="## $VERSION" '$0 == v {on=1; next} on && /^## / {exit} on' CHANGELOG.md > dist/notes.md
+          grep -q '[^[:space:]]' dist/notes.md || { echo "CHANGELOG.md ## $VERSION is empty"; exit 1; }
           cat dist/notes.md
 
       - uses: actions/upload-artifact@v5
@@ -114,14 +115,33 @@ jobs:
         if: ${{ !inputs.dry_run }}
         env:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+        # Same order as desktop BlindRadio's publish: tag by git push, draft, files, check, then
+        # public. The release never shows without its APK, which the in-app updater needs.
         run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          apk="BlindRadio-Android-$tag.apk"
+          git remote set-url origin "https://x-access-token:$FORGEJO_TOKEN@git.serrebiradio.com/serrebi/BlindRadio-Android.git"
+          git tag "$tag" "$GITHUB_SHA"
+          git push origin "$tag"
           api=https://git.serrebiradio.com/api/v1/repos/serrebi/BlindRadio-Android
           h="Authorization: token $FORGEJO_TOKEN"
-          body=$(jq -n --arg t "v$VERSION" --arg c "$GITHUB_SHA" --rawfile n dist/notes.md \
-            '{tag_name: $t, target_commitish: $c, name: $t, body: $n, draft: false, prerelease: false}')
-          id=$(curl -sf -H "$h" -H 'Content-Type: application/json' -d "$body" "$api/releases" | jq -r .id)
-          [ -n "$id" ] && [ "$id" != null ] || { echo "Release not created"; exit 1; }
-          for f in "BlindRadio-Android-v$VERSION.apk" "BlindRadio-Android-v$VERSION.apk.sha256"; do
-            curl -sf -H "$h" -F "attachment=@dist/$f" "$api/releases/$id/assets?name=$f" > /dev/null
+          # Right after the tag push the create can fail once: retry it.
+          id="$(jq -n --arg t "$tag" --rawfile n dist/notes.md '{tag_name: $t, name: $t, body: $n, draft: true}' |
+            curl -sSf --retry 3 --retry-all-errors --retry-delay 5 -H "$h" -H 'Content-Type: application/json' -d @- "$api/releases" | jq -r .id)"
+          for f in "$apk" "$apk.sha256"; do
+            curl -sSf -o /dev/null --retry 3 --retry-all-errors --retry-delay 5 -H "$h" -F "attachment=@dist/$f" "$api/releases/$id/assets?name=$f"
           done
-          curl -sf -H "$h" "$api/releases/latest" | jq -r '.tag_name, (.assets[].name)'
+          present="$(curl -sSf -H "$h" "$api/releases/$id" | jq -r '.assets[].name')"
+          echo "$present"
+          [ "$(grep -c . <<<"$present")" = 2 ] || { echo "release must hold exactly the APK and its .sha256"; exit 1; }
+          for f in "$apk" "$apk.sha256"; do
+            grep -qx "$f" <<<"$present" || { echo "missing: $f"; exit 1; }
+          done
+          curl -sSf -o /dev/null -X PATCH -H "$h" -H 'Content-Type: application/json' \
+            -d '{"draft": false, "prerelease": false}' "$api/releases/$id"
+          test "$(curl -sSf "$api/releases/latest" | jq -r .tag_name)" = "$tag"
+          # The in-app updater checks the published APK against its .sha256.
+          curl -sSfL -o "$RUNNER_TEMP/$apk" "https://git.serrebiradio.com/serrebi/BlindRadio-Android/releases/download/$tag/$apk"
+          curl -sSfL "https://git.serrebiradio.com/serrebi/BlindRadio-Android/releases/download/$tag/$apk.sha256" |
+            (cd "$RUNNER_TEMP" && sha256sum -c)
