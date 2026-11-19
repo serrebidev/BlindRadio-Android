@@ -3540,9 +3540,8 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08687262e7c0f1284b259686f322805a8adaa8ef4d7210e76448950b3f083bf7"
+version = "9.7.2"
+source = "git+https://github.com/serrebidev/zip2?branch=android-mode-t#d45f9e6ee5356a4b3852cd16bf49ffc26af1c665"
 dependencies = [
  "constant_time_eq",
  "crc32fast",

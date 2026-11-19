@@ -39,7 +39,7 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 - jni-sys 0.3 vs 0.4 = different table shape, cargo flips between them: why slots are hand-numbered. New JNI call = check its slot in jni.h.
 - adb `input keyevent` skips TalkBack. Owner tablet runs Backtalk.
 - parking_lot_core 0.10 tries futex_time64 first on 32-bit; Android 10 seccomp = SIGSYS kill (syscall 422), not ENOSYS. Patched copy `native/patches/parking_lot_core` via `[patch.crates-io]`. New parking_lot_core version = recopy + re-apply the android arm. Crash only on lock contention: rapid dial on armv7 TV shows it.
-- zip 9.7.1/9.7.2 (2026-11-19) fail armv7: `mode_t` = u16 on 32-bit Android (`u32 & u16`, extract.rs). Lock held at 9.7.0: `cargo update -p zip --precise 9.7.0`. Newer zip compiles for armv7 = drop hold.
+- zip 9.7.1+ fails armv7: `mode_t` = u16 on 32-bit Android, `st_mode` u32 (`u32 & u16`, extract.rs). Patched: fork `serrebidev/zip2` branch `android-mode-t` (clone ~/git/zip2), `[patch.crates-io]` in native/Cargo.toml. New zip release = rebase branch on its tag, `cargo update -p zip`. Upstream compiles armv7 = drop patch, delete fork.
 - AGP 9: `android.ndkDirectory` gone. Use `androidComponents.sdkComponents.ndkDirectory`.
 
 ## Release
