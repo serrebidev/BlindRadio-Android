@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.4
+
+- Last.fm scrobbling is gone: it needed an API key and secret of your own. Old Last.fm settings are dropped.
+- Libre.fm scrobbling signs in with just your user name and password: Settings, Songs, Sign in to Libre.fm. It says whose account it signed in to and keeps only the sign-in, never the password. Clear the user name to sign out.
+- ListenBrainz can scrobble to a server of your own, or to Maloja or Koito: type its address in ListenBrainz server. Blank is listenbrainz.org.
+- Check ListenBrainz says whose token it is, or why the server refused it.
+- A song whose title names no artist is no longer sent to be scrobbled. Both services refuse such listens.
+- The version number matches BlindRadio for desktop.
+
 ## 0.3.3
 
 - HLS stations that put commas in their song details, such as KCRW and iHeartRadio stations, no longer make BlindRadio request audio files that do not exist.

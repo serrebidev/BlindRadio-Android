@@ -3,7 +3,10 @@ package dev.serrebi.blindradio
 import android.app.Activity
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.view.WindowInsets
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import org.json.JSONArray
 import org.json.JSONObject
@@ -37,10 +40,41 @@ class SettingsActivity : Activity() {
     }
 
     /** A text setting; blank saves as none. */
-    private fun Form.str(label: Int, path: String) {
+    private fun Form.str(label: Int, path: String): EditText {
         val (o, k) = obj(path)
         val f = text(getString(label), o.optString(k).takeUnless { o.isNull(k) } ?: "")
         saves += { f.text.toString().trim().let { o.put(k, if (it.isEmpty()) JSONObject.NULL else it) } }
+        return f
+    }
+
+    private lateinit var message: TextView
+    private lateinit var libreUser: EditText
+    private lateinit var librePassword: EditText
+
+    /** Spoken by TalkBack: the same words again still change the text. */
+    private fun say(text: String) {
+        message.text = if (message.text.toString() == text) "$text " else text
+    }
+
+    /** Takes the engine's messages while a check runs here; the main screen takes them back on return. */
+    private fun listen() {
+        Engine.visible = true
+        Engine.listener = ::onEvent
+        Engine.schedule()
+    }
+
+    private fun onEvent(e: JSONObject) {
+        when (e.getString("k")) {
+            "say" -> say(e.getString("text"))
+            "librefm" -> {
+                val scrob = s.getJSONObject("scrobble")
+                scrob.put("librefm_user", e.getString("name"))
+                scrob.put("librefm_session_key", e.getString("key"))
+                libreUser.setText(e.getString("name"))
+                librePassword.setText("")
+                say(getString(R.string.librefm_signed_in, e.getString("name")))
+            }
+        }
     }
 
     /** A choice among JSON values (enum names), shown with labels. */
@@ -101,10 +135,37 @@ class SettingsActivity : Activity() {
         f.flag(R.string.only_no_metadata, "recognition.only_when_no_metadata")
         f.flag(R.string.announce_recognized, "recognition.announce")
         f.flag(R.string.scrobble, "scrobble.enabled")
-        f.str(R.string.listenbrainz, "scrobble.listenbrainz_token")
-        f.str(R.string.lastfm_key, "scrobble.lastfm_api_key")
-        f.str(R.string.lastfm_secret, "scrobble.lastfm_secret")
-        f.str(R.string.lastfm_session, "scrobble.lastfm_session_key")
+        val lbToken = f.str(R.string.listenbrainz, "scrobble.listenbrainz_token")
+        val lbServer = f.str(R.string.listenbrainz_server, "scrobble.listenbrainz_server")
+        f.button(getString(R.string.listenbrainz_check)) {
+            val token = lbToken.text.toString().trim()
+            if (token.isEmpty()) return@button say(getString(R.string.listenbrainz_no_token))
+            listen()
+            say(getString(R.string.checking))
+            Engine.call("listenbrainz_check", JSONObject().put("token", token)
+                .put("server", lbServer.text.toString().trim().ifEmpty { JSONObject.NULL }))
+        }
+        val scrob = s.optJSONObject("scrobble") ?: JSONObject().also { s.put("scrobble", it) }
+        libreUser = f.text(getString(R.string.librefm_user), scrob.optString("librefm_user").takeUnless { scrob.isNull("librefm_user") } ?: "")
+        // Unmasked like the tokens: TalkBack reads a masked field as dots, so a paste cannot be checked.
+        librePassword = f.text(getString(R.string.librefm_password), "")
+        f.button(getString(R.string.librefm_sign_in)) {
+            val user = libreUser.text.toString().trim()
+            val password = librePassword.text.toString()
+            if (user.isEmpty() || password.isEmpty()) return@button say(getString(R.string.librefm_need_both))
+            listen()
+            say(getString(R.string.checking))
+            Engine.call("librefm_login", JSONObject().put("user", user).put("password", password))
+        }
+        // Check and sign-in results, read out here beside the buttons.
+        message = f.para("").apply { accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE }
+        // A blank user name signs out.
+        saves += {
+            if (libreUser.text.toString().isBlank()) {
+                scrob.put("librefm_user", JSONObject.NULL)
+                scrob.put("librefm_session_key", JSONObject.NULL)
+            }
+        }
 
         f.heading(getString(R.string.sources))
         val off = s.optJSONArray("disabled_sources")?.strings()?.toMutableSet() ?: mutableSetOf()
@@ -127,6 +188,11 @@ class SettingsActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
+        // Before the main screen's onStart, which turns polling back on for itself.
+        if (Engine.listener == ::onEvent) {
+            Engine.visible = false
+            Engine.listener = null
+        }
         if (!::s.isInitialized) return
         saves.forEach { it() }
         try {

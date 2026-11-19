@@ -42,9 +42,12 @@ Engine = `blindradio-core` from `serrebi/blindradio` main, git dep. No engine co
 - AGP 9: `android.ndkDirectory` gone. Use `androidComponents.sdkComponents.ndkDirectory`.
 
 ## Release
-- Bump `versionCode` + `versionName` in `app/build.gradle.kts`, `CHANGELOG.md` `## X`. README = in-app Help, CHANGELOG = What's new (copied to assets at build): keep both current.
+- GitHub runners only: `.github/workflows/release.yml`, publish to Forgejo. Never build a release on this PC.
+- Bump `versionCode` + `versionName` in `app/build.gradle.kts`, `CHANGELOG.md` `## X`, push to Forgejo main (GitHub mirror syncs itself). Then `gh workflow run release.yml -R serrebidev/BlindRadio-Android --ref main -f version=X`. `-f dry_run=true` = build + sign, artifact only.
+- Workflow: checks version committed + tag free, native gate (`cargo test`, `clippy`), `lintDebug assembleRelease`, checks signer e686d194, makes `.apk.sha256`, creates tag + release on Forgejo with both assets, notes = changelog section.
+- Secrets on GitHub repo: `ANDROID_DEBUG_KEYSTORE` (base64 of debug.keystore), `FORGEJO_TOKEN`. Copies in owner's SigningThings store (`android\`, `forgejo-api-token.txt`). Never commit them.
+- README = in-app Help, CHANGELOG = What's new (copied to assets at build): keep both current.
 - In-app updater picks the first `.apk` asset of releases/latest and checks `.apk.sha256`. Keep exactly one APK per release.
-- Versions stay 0.x: feature +0.1.0, fix +0.0.1. versionCode only rises.
+- Versions follow desktop BlindRadio. versionCode only rises.
 - Signed with `~/.android/debug.keystore` (cert e686d194...bf10ca), same as owner's other apps. Other key = update fails on devices.
-- Forgejo `serrebi/BlindRadio-Android`: tag vX.Y.Z, release, assets `BlindRadio-Android-vX.Y.Z.apk` + `.apk.sha256`. Stable, not prerelease. GitHub mirror syncs itself.
 - TV sideload updater (`C:\Users\admin\Scripts\Update-TvSideloadedApps.ps1`) job `BlindRadio` reads releases/latest.

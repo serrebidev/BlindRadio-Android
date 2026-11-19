@@ -994,6 +994,29 @@ impl Core {
 				});
 				Value::Null
 			}
+			"librefm_login" => {
+				// Signs in with the user name and password; the password is not kept.
+				let (user, password) = (arg["user"].as_str().unwrap_or_default().to_string(), arg["password"].as_str().unwrap_or_default().to_string());
+				self.spawn(async move {
+					Done::Out(match blindradio_core::scrobble::librefm_login(&user, &password).await {
+						Ok((name, key)) => json!({ "k": "librefm", "name": name, "key": key }),
+						Err(e) => json!({ "k": "say", "text": format!("Libre.fm: {e}") }),
+					})
+				});
+				Value::Null
+			}
+			"listenbrainz_check" => {
+				let server = arg["server"].as_str().map(str::to_string);
+				let token = arg["token"].as_str().unwrap_or_default().to_string();
+				self.spawn(async move {
+					let text = match blindradio_core::scrobble::listenbrainz_user(server.as_deref(), &token).await {
+						Ok(user) => format!("ListenBrainz token works, user {user}"),
+						Err(e) => format!("ListenBrainz: {e}"),
+					};
+					Done::Out(json!({ "k": "say", "text": text }))
+				});
+				Value::Null
+			}
 			"eq_save" => {
 				let name = arg.as_str().unwrap_or_default().trim().to_string();
 				if name.is_empty() {

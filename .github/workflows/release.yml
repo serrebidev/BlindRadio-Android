@@ -1,0 +1,125 @@
+name: Release
+
+# Builds, gates and signs the APK on a GitHub runner, then publishes it on Forgejo.
+# Commit the version (app/build.gradle.kts) and its CHANGELOG.md section on main first.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version, such as 0.3.4. app/build.gradle.kts and CHANGELOG.md must already say it.
+        required: true
+        type: string
+      dry_run:
+        description: Build and sign only, publish nothing.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      VERSION: ${{ inputs.version }}
+      NDK: 27.3.13750724
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Version is committed
+        run: |
+          grep -q "versionName = \"$VERSION\"" app/build.gradle.kts || { echo "app/build.gradle.kts is not $VERSION"; exit 1; }
+          grep -qx "## $VERSION" CHANGELOG.md || { echo "CHANGELOG.md has no ## $VERSION"; exit 1; }
+
+      - name: Tag is free
+        if: ${{ !inputs.dry_run }}
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: token $FORGEJO_TOKEN" \
+            "https://git.serrebiradio.com/api/v1/repos/serrebi/BlindRadio-Android/tags/v$VERSION")
+          [ "$code" = 404 ] || { echo "Tag v$VERSION exists (HTTP $code)"; exit 1; }
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-linux-androideabi,aarch64-linux-android
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      # cpal links ALSA for the host build that runs the native tests.
+      - name: System libraries
+        run: sudo apt-get update -q && sudo apt-get install -yq libasound2-dev pkg-config
+
+      - name: NDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK" > /dev/null
+
+      # Release is signed with the owner's debug key, as every earlier release: another key
+      # cannot update installed copies. Its password is the default, android.
+      - name: Signing key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+        run: |
+          mkdir -p ~/.android
+          echo "$KEYSTORE" | base64 -d > ~/.android/debug.keystore
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey > /dev/null
+
+      - name: Native gate
+        working-directory: native
+        run: |
+          cargo test --locked
+          cargo clippy --locked --all-targets
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Build
+        run: ./gradlew --no-daemon lintDebug assembleRelease
+
+      - name: Package
+        run: |
+          mkdir dist
+          apk="BlindRadio-Android-v$VERSION.apk"
+          cp app/build/outputs/apk/release/app-release.apk "dist/$apk"
+          cert=$("$ANDROID_HOME"/build-tools/*/apksigner verify --print-certs "dist/$apk" | grep -m1 'SHA-256 digest')
+          echo "$cert"
+          case "$cert" in *e686d194*) ;; *) echo "APK not signed with the owner's key"; exit 1 ;; esac
+          (cd dist && sha256sum "$apk" > "$apk.sha256")
+          awk -v v="## $VERSION" '$0 == v {on=1; next} on && /^## / {exit} on' CHANGELOG.md > dist/notes.md
+          cat dist/notes.md
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: BlindRadio-Android-v${{ inputs.version }}
+          path: dist/
+
+      - name: Publish on Forgejo
+        if: ${{ !inputs.dry_run }}
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+        run: |
+          api=https://git.serrebiradio.com/api/v1/repos/serrebi/BlindRadio-Android
+          h="Authorization: token $FORGEJO_TOKEN"
+          body=$(jq -n --arg t "v$VERSION" --arg c "$GITHUB_SHA" --rawfile n dist/notes.md \
+            '{tag_name: $t, target_commitish: $c, name: $t, body: $n, draft: false, prerelease: false}')
+          id=$(curl -sf -H "$h" -H 'Content-Type: application/json' -d "$body" "$api/releases" | jq -r .id)
+          [ -n "$id" ] && [ "$id" != null ] || { echo "Release not created"; exit 1; }
+          for f in "BlindRadio-Android-v$VERSION.apk" "BlindRadio-Android-v$VERSION.apk.sha256"; do
+            curl -sf -H "$h" -F "attachment=@dist/$f" "$api/releases/$id/assets?name=$f" > /dev/null
+          done
+          curl -sf -H "$h" "$api/releases/latest" | jq -r '.tag_name, (.assets[].name)'

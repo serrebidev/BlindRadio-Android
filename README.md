@@ -111,7 +111,12 @@ Recording: format (as the station sends it, MP3, WAV, FLAC), MP3 bitrate and
 variable bitrate, Record songs as separate files, and the recordings folder.
 
 Songs: song recognition with AudD for stations that send no titles (paste an
-AudD token from audd.io), and scrobbling to ListenBrainz or Last.fm.
+AudD token from audd.io), and scrobbling of songs that play a minute or more.
+ListenBrainz: paste your user token. ListenBrainz server stays blank for
+listenbrainz.org; for your own server, or Maloja or Koito, type its address up
+to the part before /1/. Check ListenBrainz says whose token it is, or why it was
+refused. Libre.fm: type your user name and password, then Sign in to Libre.fm.
+Only the sign-in is kept, never the password. Clear the user name to sign out.
 
 Directories: turn any directory off; it leaves Browse and Search.
 
