@@ -79,9 +79,13 @@
     <string name="list_made">Made list %s</string>
     <string name="export_list">Export as playlist file…</string>
     <string name="exported">Exported</string>
+    <string name="not_saved">Not saved</string>
     <string name="import_playlist">Import playlist file…</string>
     <string name="import_as_list">As a new list, %s</string>
     <string name="import_into_custom">Into Custom Stations</string>
+    <string name="import_folder">Import folder of playlists…</string>
+    <string name="export_folder">Export as folder of playlists…</string>
+    <string name="reading_folder">Reading folder…</string>
     <string name="list_row">%1$s, list, %2$s</string>
     <string name="folder_row">%1$s, folder, %2$s</string>
     <string name="schedule">Schedule recording or alarm…</string>

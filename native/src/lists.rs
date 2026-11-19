@@ -2,7 +2,7 @@
 //! import and export. A place is `{"list": id, "path": [folder indexes]}`, where
 //! the list is Favorites, Recent, All Lists or a collection id.
 
-use blindradio_core::import::{self, ImportTarget};
+use blindradio_core::import::{self, ImportTarget, PlaylistFile};
 use blindradio_core::library::{Folder, StationDest};
 use blindradio_core::station::Station;
 use serde_json::{Value, json};
@@ -36,14 +36,6 @@ fn dest(p: &Place) -> Option<StationDest> {
 		FAVORITES => Some(StationDest::Favorites(p.path.clone())),
 		id => Some(StationDest::Collection { id: id.to_string(), path: p.path.clone() }),
 	}
-}
-
-fn all_in(stations: &[Station], folders: &[Folder]) -> Vec<Station> {
-	let mut out = stations.to_vec();
-	for f in folders {
-		out.extend(f.all_stations());
-	}
-	out
 }
 
 impl Core {
@@ -135,20 +127,31 @@ impl Core {
 		}
 	}
 
-	/// Everything under a place, folders included, for export.
-	fn stations_under(&self, p: &Place) -> Vec<Station> {
+	/// What a place holds, for export: its name, loose stations, folders.
+	/// All Lists holds each collection as a folder.
+	fn tree_under(&self, p: &Place) -> Result<(String, Vec<Station>, Vec<Folder>), String> {
 		let lib = &self.library;
-		match p.list.as_str() {
-			RECENT => lib.recent.clone(),
-			ALL => lib.collections.iter().flat_map(|c| c.all_stations()).collect(),
-			FAVORITES if p.path.is_empty() => lib.all_favorites(),
-			FAVORITES => lib.fav_folder_at(&p.path).map(|f| f.all_stations()).unwrap_or_default(),
-			id => match lib.collections.iter().find(|c| c.id == id) {
-				Some(c) if p.path.is_empty() => all_in(&c.stations, &c.folders),
-				Some(c) => c.folder_at(&p.path).map(|f| f.all_stations()).unwrap_or_default(),
-				None => Vec::new(),
-			},
-		}
+		let of = |f: &Folder| (f.name.clone(), f.stations.clone(), f.folders.clone());
+		Ok(match p.list.as_str() {
+			RECENT => ("Recent".into(), lib.recent.clone(), Vec::new()),
+			ALL => (
+				"All Lists".into(),
+				Vec::new(),
+				lib.collections
+					.iter()
+					.map(|c| Folder { name: c.name.clone(), stations: c.stations.clone(), folders: c.folders.clone(), origin: None })
+					.collect(),
+			),
+			FAVORITES if p.path.is_empty() => ("Favorites".into(), lib.favorites.clone(), lib.fav_folders.clone()),
+			FAVORITES => of(lib.fav_folder_at(&p.path).ok_or("no such folder")?),
+			id => {
+				let c = lib.collections.iter().find(|c| c.id == id).ok_or("no such list")?;
+				match p.path.is_empty() {
+					true => (c.name.clone(), c.stations.clone(), c.folders.clone()),
+					false => of(c.folder_at(&p.path).ok_or("no such folder")?),
+				}
+			}
+		})
 	}
 
 	fn add_to(&mut self, p: &Place, s: &Station) -> bool {
@@ -368,12 +371,41 @@ impl Core {
 				self.save_library();
 				json!(report.message())
 			}
-			"export" => {
-				let mut text = String::from("#EXTM3U\n");
-				for s in self.stations_under(&Place::of(&arg)?) {
-					text.push_str(&format!("#EXTINF:-1,{}\n{}\n", s.name.replace('\n', " "), s.url));
+			"import_folder" => {
+				// files: [{dirs: [subdirectory names], file: "Jazz.m3u", text}], read by the app.
+				let files: Vec<PlaylistFile> = arg["files"]
+					.as_array()
+					.into_iter()
+					.flatten()
+					.filter_map(|f| {
+						let dirs = f["dirs"].as_array().into_iter().flatten().filter_map(|d| d.as_str().map(String::from)).collect();
+						PlaylistFile::new(dirs, f["file"].as_str()?, f["text"].as_str()?.to_string())
+					})
+					.collect();
+				if files.is_empty() {
+					return Err("No playlists in this folder".into());
 				}
-				json!(text)
+				let name = arg["name"].as_str().filter(|n| !n.is_empty()).unwrap_or("Imported").to_string();
+				let target = match arg["as_list"].as_bool().unwrap_or(false) {
+					true => ImportTarget::Collection(name),
+					false => ImportTarget::CustomFolder(name),
+				};
+				let report = import::import_playlists(&mut self.library, files, target);
+				self.save_library();
+				json!(report.message())
+			}
+			"export" => {
+				let (_, stations, folders) = self.tree_under(&Place::of(&arg)?)?;
+				json!(import::m3u_tree_text(&stations, &folders))
+			}
+			"export_folder" => {
+				// [{name: "Jazz.m3u", text}]: a file per top folder, the app writes them.
+				let (name, stations, folders) = self.tree_under(&Place::of(&arg)?)?;
+				let files: Vec<Value> = import::playlist_dir_files(&name, &stations, &folders)
+					.into_iter()
+					.map(|(name, text)| json!({ "name": name, "text": text }))
+					.collect();
+				json!({ "name": name, "files": files })
 			}
 			_ => return Err(format!("unknown op {op}")),
 		};

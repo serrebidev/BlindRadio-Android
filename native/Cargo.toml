@@ -26,7 +26,3 @@ strip = true
 # Android. Drop when upstream skips time64 on Android (or the owner's TVs leave Android 10).
 [patch.crates-io]
 parking_lot_core = { path = "patches/parking_lot_core" }
-# ponytail: zip 9.7.1+ does not compile for 32-bit Android (st_mode u32, mode_t u16). Fork
-# branch reads the mode through one cast. Upstream fixed it in zip-rs/zip2#1328: drop this line
-# once zip 9.7.3 or newer is on crates.io, then `cargo update -p zip`.
-zip = { git = "https://github.com/serrebidev/zip2", branch = "android-mode-t" }

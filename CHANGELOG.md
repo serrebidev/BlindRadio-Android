@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.5
+
+- Import folder of playlists: pick a folder of M3U or PLS files and it becomes a list, or a folder in Custom Stations. Each file becomes a folder named after it, and subfolders stay subfolders.
+- Export as folder of playlists writes a list as a new folder holding one playlist file for each of its folders.
+- Export as playlist file now keeps folders. Before, every station landed loose in one list.
+- The version number matches BlindRadio for desktop.
+
 ## 0.3.4
 
 - Last.fm scrobbling is gone: it needed an API key and secret of your own. Old Last.fm settings are dropped.

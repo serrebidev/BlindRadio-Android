@@ -18,6 +18,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.SystemClock
+import android.provider.DocumentsContract
+import android.provider.DocumentsContract.Document
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.text.InputType
@@ -87,6 +89,9 @@ class MainActivity : Activity() {
         const val QUIET_MS = 600L
         const val IMPORT = 1
         const val EXPORT = 2
+        const val IMPORT_FOLDER = 3
+        const val EXPORT_FOLDER = 4
+        val PLAYLIST_EXT = setOf("m3u", "m3u8", "m3u_plus", "pls")
     }
 
     private val stack = ArrayList<Screen>()
@@ -113,6 +118,8 @@ class MainActivity : Activity() {
     private var filters: JSONObject? = null
     private var whenFilters: (() -> Unit)? = null
     private var exportText = ""
+    /** Export as folder: the list's name and its files, waiting for the picked folder. */
+    private var exportFiles: JSONObject? = null
     private var details: Pair<String, AlertDialog>? = null
 
     private val cur get() = stack.last()
@@ -496,7 +503,7 @@ class MainActivity : Activity() {
     private fun chooseList() {
         val lists = (Engine.call("lists") as JSONArray).objects()
         val names = lists.map { it.getString("name") } + listOf(
-            getString(R.string.new_list), getString(R.string.add_station), getString(R.string.detect), getString(R.string.import_playlist), getString(R.string.get_starter),
+            getString(R.string.new_list), getString(R.string.add_station), getString(R.string.detect), getString(R.string.import_playlist), getString(R.string.import_folder), getString(R.string.get_starter),
         )
         choose(getString(R.string.lists), names) { which ->
             when (which - lists.size) {
@@ -504,7 +511,8 @@ class MainActivity : Activity() {
                 1 -> addStation()
                 2 -> detect()
                 3 -> importPlaylist()
-                4 -> { say(getString(R.string.starter_loading)); Engine.call("starter"); Engine.schedule() }
+                4 -> importFolder()
+                5 -> { say(getString(R.string.starter_loading)); Engine.call("starter"); Engine.schedule() }
                 else -> setMain(lists[which].getString("id"))
             }
         }
@@ -773,6 +781,7 @@ class MainActivity : Activity() {
             }
         }
         out += getString(R.string.export_list) to { export(r.place, r.name) }
+        out += getString(R.string.export_folder) to { exportFolder(r.place) }
         return out
     }
 
@@ -1077,8 +1086,12 @@ class MainActivity : Activity() {
         }
         out += getString(R.string.new_list) to { newList() }
         out += getString(R.string.import_playlist) to { importPlaylist() }
+        out += getString(R.string.import_folder) to { importFolder() }
         val exportPlace = cur.place ?: place(mainListId).takeIf { cur.kind == Kind.MAIN }
-        if (exportPlace != null) out += getString(R.string.export_list) to { export(exportPlace, cur.title) }
+        if (exportPlace != null) {
+            out += getString(R.string.export_list) to { export(exportPlace, cur.title) }
+            out += getString(R.string.export_folder) to { exportFolder(exportPlace) }
+        }
         commands(getString(R.string.list_menu), out)
     }
 
@@ -1232,6 +1245,47 @@ class MainActivity : Activity() {
         startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), IMPORT)
     }
 
+    private fun importFolder() {
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), IMPORT_FOLDER)
+    }
+
+    /** Each top folder of the place as its own playlist file, in a new folder inside the one picked. */
+    private fun exportFolder(place: JSONObject) {
+        exportFiles = Engine.call("export_folder", place) as JSONObject
+        @Suppress("DEPRECATION")
+        startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), EXPORT_FOLDER)
+    }
+
+    /** Every playlist file under a picked folder, with the subfolders it sits in. Slow on a big folder: off the main thread. */
+    private fun readTree(tree: Uri, docId: String, dirs: List<String>, out: JSONArray) {
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
+        val cols = arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME, Document.COLUMN_MIME_TYPE)
+        contentResolver.query(children, cols, null, null, null)?.use { c ->
+            while (c.moveToNext()) {
+                val id = c.getString(0)
+                val name = c.getString(1) ?: continue
+                if (c.getString(2) == Document.MIME_TYPE_DIR) {
+                    readTree(tree, id, dirs + name, out)
+                } else if (name.substringAfterLast('.', "").lowercase() in PLAYLIST_EXT) {
+                    val text = contentResolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, id))?.use { String(it.readBytes()) } ?: continue
+                    out.put(JSONObject().put("dirs", JSONArray(dirs)).put("file", name).put("text", text))
+                }
+            }
+        }
+    }
+
+    /** Off the main thread, then back on it: engine calls stay on the main thread. */
+    private fun inBackground(work: () -> Unit) {
+        Thread {
+            try {
+                work()
+            } catch (e: Exception) {
+                runOnUiThread { say(e.message ?: e.toString()) }
+            }
+        }.start()
+    }
+
     private fun export(place: JSONObject, name: String) {
         exportText = Engine.call("export", place) as String
         @Suppress("DEPRECATION")
@@ -1252,6 +1306,40 @@ class MainActivity : Activity() {
                 EXPORT -> {
                     contentResolver.openOutputStream(uri)?.use { it.write(exportText.toByteArray()) }
                     act(getString(R.string.exported))
+                }
+                IMPORT_FOLDER -> {
+                    val root = DocumentsContract.getTreeDocumentId(uri)
+                    val name = displayName(DocumentsContract.buildDocumentUriUsingTree(uri, root))
+                    choose(getString(R.string.import_folder), listOf(getString(R.string.import_as_list, name), getString(R.string.import_into_custom))) { i ->
+                        say(getString(R.string.reading_folder))
+                        inBackground {
+                            val files = JSONArray()
+                            readTree(uri, root, emptyList(), files)
+                            runOnUiThread {
+                                try {
+                                    say(Engine.call("import_folder", JSONObject().put("files", files).put("name", name).put("as_list", i == 0)) as String)
+                                    reload()
+                                } catch (e: Exception) {
+                                    say(e.message ?: e.toString())
+                                }
+                            }
+                        }
+                    }
+                }
+                EXPORT_FOLDER -> {
+                    val ex = exportFiles ?: return
+                    val parent = DocumentsContract.buildDocumentUriUsingTree(uri, DocumentsContract.getTreeDocumentId(uri))
+                    inBackground {
+                        // The provider names it Jazz (1) when Jazz is taken: nothing is overwritten.
+                        val dir = DocumentsContract.createDocument(contentResolver, parent, Document.MIME_TYPE_DIR, ex.getString("name"))
+                            ?: throw java.io.IOException(getString(R.string.not_saved))
+                        for (f in ex.getJSONArray("files").objects()) {
+                            val doc = DocumentsContract.createDocument(contentResolver, dir, "audio/x-mpegurl", f.getString("name"))
+                                ?: throw java.io.IOException(getString(R.string.not_saved))
+                            contentResolver.openOutputStream(doc)?.use { it.write(f.getString("text").toByteArray()) }
+                        }
+                        runOnUiThread { act(getString(R.string.exported)) }
+                    }
                 }
                 IMPORT -> {
                     val text = contentResolver.openInputStream(uri)?.use { it.readBytes() }?.let { String(it) } ?: return

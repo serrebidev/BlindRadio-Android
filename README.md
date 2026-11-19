@@ -49,7 +49,7 @@ A station's actions:
 
 A folder's actions: Open, New folder, Paste into this folder, Copy folder, Cut
 folder, Paste folder into this folder, Rename, Move up, Move down, Delete, Export
-as playlist file. This list (in Menu) has Paste folder here too. In All Lists each list is a row with
+as playlist file, Export as folder of playlists. This list (in Menu) has Paste folder here too. In All Lists each list is a row with
 Show this list on the main screen, Rename, Move up, Move down, Delete and Export.
 
 The now-playing line at the top is a control too. Double tap it to pause or play.
@@ -62,8 +62,8 @@ history, and Say what is playing.
 - Lists: pick which list the main screen shows (Favorites, Recent, All Lists,
   SerrebiRadio, Custom Stations, your own lists). Also New list, Add station by
   address, Detect streams on a web page (a station's site, or a YouTube or Twitch
-  link: the streams found are listed to play or file), Import playlist file, and
-  Get the SerrebiRadio list.
+  link: the streams found are listed to play or file), Import playlist file, Import folder of
+  playlists, and Get the SerrebiRadio list.
 - Search: every directory at once, by station name. Menu, Search filters adds
   genre, country, language and sort.
 - Browse: Radio Browser, TuneIn, iHeartRadio, SHOUTcast, Icecast, Live365 and the
@@ -72,6 +72,16 @@ history, and Say what is playing.
 
 Back goes up one level. Playback keeps going with the screen off or in another
 app; the notification, a headset button or the TV remote's media keys control it.
+
+## Folders of playlists
+
+Import folder of playlists picks a folder on the device: as a new list named after
+it, or into Custom Stations. Each playlist file in it (M3U, M3U8, PLS) becomes a
+folder named after the file, and each subfolder stays a subfolder. A station already
+in the list lands only once. Export as folder of playlists makes a new folder,
+named after the list, inside the folder you pick: one playlist file for each top
+folder, with its subfolders kept inside the file. Importing it back brings the same
+folders. Export as playlist file keeps folders too.
 
 ## Menu
 
@@ -86,7 +96,8 @@ app; the notification, a headset button or the TV remote's media keys control it
   Equalizer (presets, ten bands, and presets of your own to save, apply and delete), Audio channels (stereo, mono, left, right),
   and the Sleep timer.
 - This list: Filter this list, Go to the playing station, New folder, Paste here,
-  New list, Import playlist file, Export as playlist file.
+  New list, Import playlist file, Import folder of playlists, Export as playlist
+  file, Export as folder of playlists.
 - Scheduled recordings: each one a row; its actions turn it on or off or delete it.
   Schedule new ones from a station's actions. A schedule starts BlindRadio by itself
   at its time, records in the background without interrupting what you hear, and
