@@ -16,6 +16,9 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
     // English-only first release; ChromeOS is not a target.
     lint { disable += setOf("SetTextI18n", "ChromeOsAbiSupport") }
+    // CI points at the owner's key file: the runner's Android home is not ~/.android, so the
+    // default debug key there is a fresh one that cannot update installed copies.
+    System.getenv("BLINDRADIO_KEYSTORE")?.let { signingConfigs.getByName("debug").storeFile = file(it) }
     // Release shares the debug key, like the owner's other Android apps: updates install over each other.
     buildTypes { release { isMinifyEnabled = false; signingConfig = signingConfigs.getByName("debug") } }
 }
