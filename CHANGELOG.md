@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7
+
+- Detect streams on a web page finds scheme-relative stream links in player scripts. Relative links now resolve from the final page address after redirects.
+- Stream detection reports an error if the search fails and times out after 90 seconds.
+
 ## 0.3.5
 
 - Import folder of playlists: pick a folder of M3U or PLS files and it becomes a list, or a folder in Custom Stations. Each file becomes a folder named after it, and subfolders stay subfolders.

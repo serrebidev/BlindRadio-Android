@@ -61,8 +61,9 @@ history, and Say what is playing.
 
 - Lists: pick which list the main screen shows (Favorites, Recent, All Lists,
   SerrebiRadio, Custom Stations, your own lists). Also New list, Add station by
-  address, Detect streams on a web page (a station's site, or a YouTube or Twitch
-  link: the streams found are listed to play or file), Import playlist file, Import folder of
+  address, Detect streams on a web page, including scheme-relative links in player scripts.
+  You can also detect streams from YouTube and Twitch links. Play or file the results.
+  Menu also offers Import playlist file, Import folder of
   playlists, and Get the SerrebiRadio list.
 - Search: every directory at once, by station name. Menu, Search filters adds
   genre, country, language and sort.
