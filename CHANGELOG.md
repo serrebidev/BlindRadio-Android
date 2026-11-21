@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.8
+
+- This list offers Flat playlist view and Grouped playlist view for each playlist. Flat view follows the file order. Refresh SerrebiRadio or reimport an older playlist into the same list to recover its file order.
+
 ## 0.3.7
 
 - Detect streams on a web page finds scheme-relative stream links in player scripts. Relative links now resolve from the final page address after redirects.

@@ -96,6 +96,13 @@ folders. Export as playlist file keeps folders too.
 - Sound: Volume (a slider TalkBack moves with swipes up and down), Mute, the
   Equalizer (presets, ten bands, and presets of your own to save, apply and delete), Audio channels (stereo, mono, left, right),
   and the Sleep timer.
+- **Flat playlist view** and **Grouped playlist view** are in **This list** at
+  a playlist's top level. Each playlist remembers its view. Flat view uses the
+  original file order, then lists other stations in library order. To recover
+  the file order for an older playlist, use **Get the SerrebiRadio list** or
+  reimport the original file into the same list. Existing stations keep their
+  folders. Switch to grouped view to move stations within their folders.
+
 - This list: Filter this list, Go to the playing station, New folder, Paste here,
   New list, Import playlist file, Import folder of playlists, Export as playlist
   file, Export as folder of playlists.

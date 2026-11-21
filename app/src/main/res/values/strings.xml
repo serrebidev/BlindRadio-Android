@@ -121,6 +121,8 @@
     <string name="timeshift_menu">Time-shift…</string>
     <string name="recording_menu">Recording…</string>
     <string name="sound_menu">Sound…</string>
+    <string name="flat_playlist">Flat playlist view</string>
+    <string name="grouped_playlist">Grouped playlist view</string>
     <string name="list_menu">This list…</string>
     <string name="search_filters">Search filters…</string>
     <string name="sort">Sort</string>

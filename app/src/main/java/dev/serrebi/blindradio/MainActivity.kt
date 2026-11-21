@@ -53,7 +53,7 @@ import java.util.Date
 /** A list row: a station, a folder, the row that loads the next page, or a plain item. */
 sealed class Row {
     /** [index] = its place in a library level, for moving and deleting (-1 elsewhere). */
-    class Station(val s: JSONObject, val index: Int = -1) : Row()
+    class Station(val s: JSONObject, val index: Int = -1, val place: JSONObject? = null) : Row()
     /** A directory folder in Browse. */
     class Folder(val id: String, val name: String) : Row()
     /** A folder of one of your lists, or (in All Lists) a whole list. */
@@ -368,7 +368,7 @@ class MainActivity : Activity() {
         val rows = l.getJSONArray("rows").objects().map { r ->
             when (r.getString("t")) {
                 "lib" -> Row.Lib(r.getJSONObject("place"), r.getString("name"), r.optInt("count"), r.optBoolean("list"))
-                else -> Row.Station(r.getJSONObject("s"), r.optInt("i", -1))
+                else -> Row.Station(r.getJSONObject("s"), r.optInt("i", -1), r.optJSONObject("place"))
             }
         }
         return l.getString("title") to rows.toMutableList()
@@ -714,7 +714,7 @@ class MainActivity : Activity() {
         out += getString(R.string.station_sound) to { stationSound(s) }
         out += getString(R.string.schedule) to { scheduleFor(s) }
         out += getString(R.string.copy) to { clip = s to null; folderClip = null; act(getString(R.string.copied)) }
-        val here = rowPlace()
+        val here = r.place ?: rowPlace()
         if (here != null && r.index >= 0) {
             out += getString(R.string.cut) to {
                 clip = s to JSONObject().put("place", here).put("index", r.index)
@@ -722,8 +722,10 @@ class MainActivity : Activity() {
                 act(getString(R.string.cut_done))
             }
             if (clip != null) out += getString(R.string.paste) to { paste(here) }
-            out += getString(R.string.move_up) to { moveStation(here, r.index, true, pos) }
-            out += getString(R.string.move_down) to { moveStation(here, r.index, false, pos) }
+            if (r.place == null) {
+                out += getString(R.string.move_up) to { moveStation(here, r.index, true, pos) }
+                out += getString(R.string.move_down) to { moveStation(here, r.index, false, pos) }
+            }
             out += getString(R.string.delete) to {
                 confirm(getString(R.string.delete_ask, s.optString("name"))) {
                     Engine.call("remove_at", JSONObject().put("place", here).put("index", r.index))
@@ -1089,6 +1091,16 @@ class MainActivity : Activity() {
         out += getString(R.string.import_folder) to { importFolder() }
         val exportPlace = cur.place ?: place(mainListId).takeIf { cur.kind == Kind.MAIN }
         if (exportPlace != null) {
+            val id = exportPlace.getString("list")
+            if (exportPlace.optJSONArray("path")?.length() == 0) {
+                val view = JSONObject().put("id", id).put("legacy_main", cur.kind == Kind.MAIN)
+                val flat = Engine.call("playlist_view", view) as? Boolean
+                if (flat != null) out += getString(if (flat) R.string.grouped_playlist else R.string.flat_playlist) to {
+                    val nowFlat = Engine.call("toggle_playlist_view", view) == true
+                    if (stack.size == 1) loadMain() else reload()
+                    act(getString(if (nowFlat) R.string.flat_playlist else R.string.grouped_playlist))
+                }
+            }
             out += getString(R.string.export_list) to { export(exportPlace, cur.title) }
             out += getString(R.string.export_folder) to { exportFolder(exportPlace) }
         }

@@ -58,7 +58,15 @@ impl Core {
 			.or_else(|| lib.collections.iter().find(|c| c.name.eq_ignore_ascii_case(import::STARTER_COLLECTION)))
 			.or_else(|| lib.collections.iter().find(|c| !c.all_stations().is_empty()));
 		match chosen {
-			Some(c) => (c.id.clone(), c.name.clone(), c.all_stations()),
+			Some(c) => {
+				let stations = c.all_stations();
+				let stations = if c.flat_view.unwrap_or(self.settings.expand_dial_folders) {
+					c.flat_indices(&stations).into_iter().map(|i| stations[i].clone()).collect()
+				} else {
+					stations
+				};
+				(c.id.clone(), c.name.clone(), stations)
+			}
 			None => (FAVORITES.into(), "Favorites".into(), lib.all_favorites()),
 		}
 	}
@@ -69,8 +77,9 @@ impl Core {
 		let current = self.tuner.playing().or(self.remembered.as_ref()).map(|s| s.id.clone());
 		json!({
 			"id": id, "name": name, "stations": stations, "current": current,
-			// Off = the list opens as its folders, to walk into.
-			"flat": self.settings.expand_dial_folders,
+			// A playlist with an explicit view uses the level API for exact row locations.
+			"flat": self.library.collections.iter().find(|c| c.id == id)
+				.and_then(|c| c.flat_view).is_none() && self.settings.expand_dial_folders,
 		})
 	}
 
@@ -106,6 +115,14 @@ impl Core {
 			id => {
 				let c = lib.collections.iter().find(|c| c.id == id).ok_or("no such list")?;
 				if p.path.is_empty() {
+					if c.flat_view == Some(true) {
+						let stations = c.all_stations();
+						let rows: Vec<_> = c.flat_indices(&stations).into_iter().filter_map(|i| {
+							let (path, local) = c.station_location(i)?;
+							Some(json!({ "t": "station", "s": stations[i], "i": local, "place": place_json(id, &path) }))
+						}).collect();
+						return Ok(json!({ "title": c.name, "rows": rows }));
+					}
 					(c.name.clone(), c.stations.clone(), folder_rows(&c.folders, id))
 				} else {
 					let f = c.folder_at(&p.path).ok_or("no such folder")?;
@@ -180,6 +197,20 @@ impl Core {
 				self.settings.main_list = arg.as_str().map(String::from);
 				self.save_settings();
 				self.main_json()
+			}
+			"playlist_view" | "toggle_playlist_view" => {
+				let id = arg["id"].as_str().ok_or("no list")?;
+				let default = arg["legacy_main"].as_bool().unwrap_or(false) && self.settings.expand_dial_folders;
+				match self.library.collection_mut(id) {
+					Some(c) if op == "toggle_playlist_view" => {
+						let flat = !c.flat_view.unwrap_or(default);
+						c.flat_view = Some(flat);
+						self.save_library();
+						json!(flat)
+					}
+					Some(c) => json!(c.flat_view.unwrap_or(default)),
+					None => Value::Null,
+				}
 			}
 			"level" => self.level(&Place::of(&arg)?)?,
 			"is_fav" => json!(self.library.is_favorite_station(&station(&arg)?)),
