@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.10
+
+- Detect streams on a web page finds relative stream paths in player scripts and honors the page's declared base URL.
+
 ## 0.3.9
 
 - Browse Global under Networks for 142 live stations, including all feeds from the former Capital network.
