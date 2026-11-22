@@ -62,7 +62,9 @@ history, and Say what is playing.
 - Lists: pick which list the main screen shows (Favorites, Recent, All Lists,
   SerrebiRadio, Custom Stations, your own lists). Also New list, Add station by
   address, Detect streams on a web page, including relative stream paths in player scripts.
-  You can also detect streams from YouTube and Twitch links. Play or file the results.
+  You can also detect streams from YouTube, Twitch, and Football360 live links, and
+  from MPEG-TS links on pages. Football360 playback requires access to the provider's feed.
+  Play or file the results.
   Menu also offers Import playlist file, Import folder of
   playlists, and Get the SerrebiRadio list.
 - Search: every directory at once, by station name. Menu, Search filters adds

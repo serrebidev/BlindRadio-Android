@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.12
+
+- Fix decompression errors during YouTube live playback.
+- Detect Football360 live audio through its player feed and report errors when the provider blocks access.
+- Detect MPEG-TS links and direct video player sources that expose supported audio streams.
+
 ## 0.3.11
 
 - Detect streams on a web page can find streams in same-site player frames that require a referrer, including Shabakeh 3 on Parsa TV.
