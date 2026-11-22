@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.13
+
+- A link copied from a web page or a chat that carries unseen characters in front of it, such as a BOM or a direction mark, plays again. The engine now strips those before the address.
+
 ## 0.3.12
 
 - Fix decompression errors during YouTube live playback.
