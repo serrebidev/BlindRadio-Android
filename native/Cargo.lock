@@ -147,8 +147,8 @@ dependencies = [
 
 [[package]]
 name = "blindradio-core"
-version = "0.3.12"
-source = "git+https://git.serrebiradio.com/serrebi/blindradio?branch=main#6aa5d45c1b6614af55b81d96d552731ccbd92406"
+version = "0.3.14"
+source = "git+https://git.serrebiradio.com/serrebi/blindradio?branch=main#c46b0ca15b13d72997be0e980ed6d9c9f6bed59f"
 dependencies = [
  "aes",
  "base64",
@@ -1320,9 +1320,9 @@ checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
 
 [[package]]
 name = "m3u8-parser"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d519e2c55bca5b53eb47a0c6b1a2e42d132f6885c66236cd3bced6ec74b4bbb5"
+checksum = "0e03f27d2fbfe5e90de620028305e9cdec9071330e8837def89d53011b7bd672"
 
 [[package]]
 name = "mach2"

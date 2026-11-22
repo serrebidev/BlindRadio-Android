@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.14
+
+- When YouTube requires sign-in, detection and playback explain that you can open the stream in your browser.
+
 ## 0.3.13
 
 - A link copied from a web page or a chat that carries unseen characters in front of it, such as a BOM or a direction mark, plays again. The engine now strips those before the address.

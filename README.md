@@ -15,6 +15,7 @@ YouTube and Twitch live streams play too: add a station by its link (Lists, Add
 station by address) and BlindRadio plays the stream's audio only. A video link,
 a channel's live page (youtube.com/@channel/live) and a Twitch channel
 (twitch.tv/channel) all work.
+If YouTube requires sign-in during detection or playback, open the stream in your browser.
 
 ## Tuning like a dial
 
