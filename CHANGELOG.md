@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.9
+
+- Browse Global under Networks for 142 live stations, including all feeds from the former Capital network.
+
 ## 0.3.8
 
 - This list offers Flat playlist view and Grouped playlist view for each playlist. Flat view follows the file order. Refresh SerrebiRadio or reimport an older playlist into the same list to recover its file order.
