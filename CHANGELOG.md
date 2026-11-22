@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.11
+
+- Detect streams on a web page can find streams in same-site player frames that require a referrer, including Shabakeh 3 on Parsa TV.
+
 ## 0.3.10
 
 - Detect streams on a web page finds relative stream paths in player scripts and honors the page's declared base URL.
