@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.15
+
+- Updated the native engine and stream playlist parser.
+- Updated Android build tools to remove a Gradle deprecation.
+
 ## 0.3.14
 
 - When YouTube requires sign-in, detection and playback explain that you can open the stream in your browser.
