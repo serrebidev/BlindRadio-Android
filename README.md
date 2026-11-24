@@ -113,7 +113,10 @@ folders. Export as playlist file keeps folders too.
   Schedule new ones from a station's actions. A schedule starts BlindRadio by itself
   at its time, records in the background without interrupting what you hear, and
   stops when its time is up. An alarm plays the station instead.
-- Settings, Check for updates, Help, What's new, About.
+- Settings, Check for updates, Help, What's new, Report an issue on GitHub, About.
+- Report an issue on GitHub asks for a title and a description. Open GitHub shows
+  GitHub's new issue page with both filled in and your BlindRadio version and device
+  added. Sign in on GitHub and press Create.
 
 ## Settings
 

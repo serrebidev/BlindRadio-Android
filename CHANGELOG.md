@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.16
+
+- Menu, Report an issue on GitHub asks for a title and a description, then opens GitHub's new issue page with both filled in and your BlindRadio version and device added. Sign in on GitHub and press Create.
+
 ## 0.3.15
 
 - Updated the native engine and stream playlist parser.

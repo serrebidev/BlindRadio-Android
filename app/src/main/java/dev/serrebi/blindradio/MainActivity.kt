@@ -1029,6 +1029,7 @@ class MainActivity : Activity() {
         out += getString(R.string.check_now) to { Updater.check(this, quiet = false, say = ::say) }
         out += getString(R.string.help) to { showText(getString(R.string.help), asset("README.md")) }
         out += getString(R.string.changelog) to { showText(getString(R.string.changelog), asset("CHANGELOG.md")) }
+        out += getString(R.string.report_issue) to { reportIssue() }
         out += getString(R.string.about) to { about() }
         commands(getString(R.string.menu), out)
     }
@@ -1232,6 +1233,29 @@ class MainActivity : Activity() {
     }
 
     private fun asset(name: String) = try { assets.open(name).bufferedReader().readText() } catch (_: Exception) { "" }
+
+    /**
+     * Menu, Report an issue on GitHub: title and description typed here, then GitHub's new-issue
+     * page opens with both filled in and the version line added. GitHub needs the user's own
+     * account, so the last step, Create, is theirs in the browser.
+     */
+    private fun reportIssue() {
+        val form = Form(this)
+        val summary = form.text(getString(R.string.report_issue_summary), "")
+        val details = form.text(getString(R.string.report_issue_details), "",
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE).apply { isSingleLine = false; minLines = 4 }
+        val dialog = AlertDialog.Builder(this).setTitle(R.string.report_issue).setView(form.scroll)
+            .setPositiveButton(R.string.report_issue_open, null).setNegativeButton(R.string.cancel, null).show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val title = summary.text.toString().trim()
+            if (title.isEmpty()) { summary.error = getString(R.string.report_issue_summary); summary.requestFocus(); return@setOnClickListener }
+            val v = packageManager.getPackageInfo(packageName, 0).versionName
+            val body = "${details.text.toString().trim()}\n\n---\nBlindRadio $v on Android ${Build.VERSION.RELEASE} ${Build.MANUFACTURER} ${Build.MODEL}"
+            fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+            openUrl("https://github.com/serrebidev/BlindRadio-Android/issues/new?title=${enc(title)}&body=${enc(body)}")
+            dialog.dismiss()
+        }
+    }
 
     private fun about() {
         val v = packageManager.getPackageInfo(packageName, 0).versionName

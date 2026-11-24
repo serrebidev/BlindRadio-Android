@@ -239,4 +239,8 @@
         <item quantity="one">%d station</item>
         <item quantity="other">%d stations</item>
     </plurals>
+    <string name="report_issue">Report an issue on GitHub</string>
+    <string name="report_issue_summary">Title</string>
+    <string name="report_issue_details">Description</string>
+    <string name="report_issue_open">Open GitHub</string>
 </resources>
