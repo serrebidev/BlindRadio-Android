@@ -42,6 +42,9 @@ pub const RECENT: &str = "recent";
 const DEVICE_POLL: Duration = Duration::from_secs(2);
 /// A Radio Browser play counts once it has sounded this long (its rules).
 const PLAY_COUNTS: Duration = Duration::from_secs(10);
+/// The SerrebiRadio list is asked about this often; it downloads only when it changed.
+const STARTER_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
+const STARTER_FIRST: Duration = Duration::from_secs(10);
 const VOLUME_MAX_POINTS: i32 = 200;
 /// Decoded time-shift costs about 11 MB a minute: a TV has 2 GB in all.
 const ANDROID_SHIFT_MINUTES: u32 = 5;
@@ -101,7 +104,8 @@ impl Sink for Shared {
 pub(crate) type FolderRead = (StationDest, String, blindradio_core::Result<(Vec<Station>, Vec<Folder>)>);
 
 pub(crate) enum Done {
-	Starter(blindradio_core::Result<String>),
+	/// The SerrebiRadio list, None when unchanged since its ETag; true for the quiet check.
+	Starter(blindradio_core::Result<Option<(String, Option<String>)>>, bool),
 	Out(Value),
 	/// A Browse folder read for Add folder to list: where it goes, the folder, its tree.
 	Filed(StationDest, Folder, blindradio_core::Result<(Vec<Station>, Vec<Folder>)>),
@@ -140,6 +144,8 @@ pub struct Core {
 	sched_fired: HashSet<(String, u64)>,
 	sched_active: Option<(String, u64)>,
 	last_sched_poll: Instant,
+	/// When to ask whether the SerrebiRadio list changed.
+	starter_due: Instant,
 	/// What the mixer was last told, so a dial move sends nothing new.
 	heard_eq: EqSettings,
 	heard_channels: ChannelMode,
@@ -222,6 +228,7 @@ impl Core {
 		let (done_tx, done_rx) = crossbeam_channel::unbounded();
 		let sources = Sources::new(engine.ctx.client.clone(), Endpoints::default());
 		sources.set_disabled(settings.disabled_sources.clone());
+		sources.set_cache_dir(data.to_path_buf());
 		let mut tuner = Tuner::new(LiveFactory(engine.ctx.clone()), Shared(output.clone()), tx);
 		tuner.set_settings(Arc::new(parking_lot::Mutex::new(settings.clone())));
 		let core = Core {
@@ -250,6 +257,7 @@ impl Core {
 			sched_fired: HashSet::new(),
 			sched_active: None,
 			last_sched_poll: Instant::now(),
+			starter_due: Instant::now() + STARTER_FIRST,
 			last_device_poll: Instant::now(),
 			output_on: true,
 			engine,
@@ -272,7 +280,17 @@ impl Core {
 
 	fn get_starter(&self) {
 		let client = self.engine.ctx.client.clone();
-		self.spawn(async move { Done::Starter(import::fetch_starter(&client).await) });
+		self.spawn(async move { Done::Starter(import::fetch_starter_if_changed(&client, None).await, false) });
+	}
+
+	/// Downloads the SerrebiRadio list only when it changed, and adds its new stations.
+	/// A deleted SerrebiRadio list stays deleted.
+	fn refresh_starter(&self) {
+		if !self.library.collections.iter().any(|c| c.name.eq_ignore_ascii_case(import::STARTER_COLLECTION)) {
+			return;
+		}
+		let (client, tag) = (self.engine.ctx.client.clone(), self.settings.starter_etag.clone());
+		self.spawn(async move { Done::Starter(import::fetch_starter_if_changed(&client, tag.as_deref()).await, true) });
 	}
 
 	fn save_library(&self) {
@@ -682,6 +700,10 @@ impl Core {
 
 	fn poll(&mut self) -> Value {
 		let now = Instant::now();
+		if now >= self.starter_due {
+			self.starter_due = now + STARTER_EVERY;
+			self.refresh_starter();
+		}
 		let rendered: Vec<_> = self.rendered.try_iter().collect();
 		self.tuner.poll(now, &rendered);
 		let mut out = Vec::new();
@@ -753,12 +775,21 @@ impl Core {
 		while let Ok(done) = self.done_rx.try_recv() {
 			match done {
 				Done::Out(v) => out.push(v),
-				Done::Starter(Ok(body)) => {
-					import::import_starter(&mut self.library, &body);
+				Done::Starter(Ok(Some((body, tag))), quiet) => {
+					self.settings.starter_etag = tag;
+					self.save_settings();
+					let report = import::import_starter(&mut self.library, &body);
 					self.save_library();
-					out.push(json!({ "k": "lists" }));
+					if !quiet || report.added > 0 {
+						out.push(json!({ "k": "lists" }));
+					}
+					if quiet && report.added > 0 {
+						say(&mut out, format!("SerrebiRadio: {} new stations", report.added));
+					}
 				}
-				Done::Starter(Err(e)) => say(&mut out, format!("Starter list not loaded: {e}")),
+				Done::Starter(Ok(None), _) => {}
+				Done::Starter(Err(e), false) => say(&mut out, format!("Starter list not loaded: {e}")),
+				Done::Starter(Err(_), true) => {}
 				Done::Filed(at, folder, got) => {
 					let text = self.filed(at, folder, got);
 					out.push(json!({ "k": "changed", "text": text }));

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.21
+
+- The SerrebiRadio list follows itself: at start and every six hours BlindRadio asks whether it changed, downloads it only when it has, and adds its new stations, saying how many. Nothing is removed, and a deleted SerrebiRadio list stays deleted.
+- Polska (rstreams.ovh) keeps its copy between runs and downloads the file again only when it has changed. Without a connection, the kept copy still browses and searches.
+
 ## 0.3.20
 
 - Playback speed for the time-shift buffer, 0.5x to 2x: Faster, Slower and Normal speed in Menu, Time-shift, and Faster and Slower on the now-playing line. Faster catches up on a program you went back in, then plays live at normal speed. Slower falls behind live. Voices keep their pitch; Settings, Speed keeps the pitch off switches to tape speed.

@@ -79,13 +79,17 @@ Record, Song history, and Say what is playing. Changing the volume while muted u
   from MPEG-TS links on pages. Football360 playback requires access to the provider's feed.
   Play or file the results.
   Menu also offers Import playlist file, Import folder of
-  playlists, and Get the SerrebiRadio list.
+  playlists, and Get the SerrebiRadio list. The SerrebiRadio list also follows
+  itself: at start and every six hours BlindRadio asks whether it changed, downloads
+  it only when it has, and adds its new stations. Nothing is removed, and a deleted
+  SerrebiRadio list stays deleted.
 - Search: every directory at once, by station name. Menu, Search filters adds
   genre, country, language and sort.
 - Browse: Radio Browser, TuneIn, iHeartRadio, SHOUTcast, Icecast, Live365 and the
   rest, folder by folder. Menu, Sort changes a directory's order. Networks is sorted
   by language: English, Polish (with Polska from rstreams.ovh, the licensed Polish
-  stations on air) and Russian (Radio Record).
+  stations on air) and Russian (Radio Record). Polska keeps its copy and downloads
+  again only when the file has changed; offline, the kept copy still works.
 - Menu: everything else, below.
 
 Back goes up one level. Playback keeps going with the screen off or in another
