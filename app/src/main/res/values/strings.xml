@@ -243,4 +243,18 @@
     <string name="report_issue_summary">Title</string>
     <string name="report_issue_details">Description</string>
     <string name="report_issue_open">Open GitHub</string>
+
+    <string name="faster">Faster</string>
+    <string name="slower">Slower</string>
+    <string name="normal_speed">Normal speed</string>
+    <string name="speed_n">Speed %sx</string>
+    <string name="keep_pitch">Speed keeps the pitch (off: tape, pitch follows speed)</string>
+    <string name="unmuted_volume_n">Unmuted, volume %d</string>
+    <string name="hide_titles">Hide song titles from this station</string>
+    <string name="add_folder_to_list">Add folder to list</string>
+    <string name="adding">Adding %s</string>
+    <string name="update_from_directory">Update from directory</string>
+    <string name="update_directory_folders">Update directory folders</string>
+    <string name="put_here">Put in %s</string>
+    <string name="folder_more">%s, folder</string>
 </resources>

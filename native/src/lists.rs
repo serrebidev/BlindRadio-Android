@@ -3,11 +3,12 @@
 //! the list is Favorites, Recent, All Lists or a collection id.
 
 use blindradio_core::import::{self, ImportTarget, PlaylistFile};
-use blindradio_core::library::{Folder, StationDest};
+use blindradio_core::library::{Folder, Refreshed, StationDest};
+use blindradio_core::sources::{ADD_CAP, Sort};
 use blindradio_core::station::Station;
 use serde_json::{Value, json};
 
-use crate::{ALL, Core, FAVORITES, RECENT};
+use crate::{ALL, Core, Done, FAVORITES, FolderRead, RECENT};
 
 pub struct Place {
 	pub list: String,
@@ -179,6 +180,65 @@ impl Core {
 		}
 	}
 
+	/// A destination as Add to list names it: `Favorites`, `Jazz > Late night`.
+	fn dest_name(&self, at: &StationDest) -> String {
+		self.library.destinations().into_iter().find(|(_, d)| d == at).map(|(name, _)| name).unwrap_or_default()
+	}
+
+	/// A Browse folder's read came back: file it.
+	pub(crate) fn filed(&mut self, at: StationDest, mut folder: Folder, got: blindradio_core::Result<(Vec<Station>, Vec<Folder>)>) -> String {
+		let (stations, folders) = match got {
+			Ok(tree) => tree,
+			Err(e) => return format!("Not saved: {e}"),
+		};
+		(folder.stations, folder.folders) = (stations, folders);
+		let count = folder.all_stations().len();
+		if count == 0 {
+			return "Nothing to add".into();
+		}
+		match self.library.add_folder_to(&at, folder) {
+			Some(n) => {
+				self.save_library();
+				let tail = if count >= ADD_CAP { ", stopped there" } else { "" };
+				format!("Added {n} to {}{tail}", self.dest_name(&at))
+			}
+			None => "Not saved".into(),
+		}
+	}
+
+	/// Update from Directory came back: new stations in, changed addresses followed, nothing out.
+	/// A directory that answers with nothing is down or switched off, never a reason to empty it.
+	pub(crate) fn updated(&mut self, done: Vec<FolderRead>, one: Option<String>) -> String {
+		let (mut total, mut folders, mut missed) = (Refreshed::default(), 0, 0);
+		for (at, origin, got) in done {
+			let up = match got {
+				Ok((stations, sub)) if !stations.is_empty() || !sub.is_empty() => Folder { stations, folders: sub, ..Folder::default() },
+				_ => {
+					missed += 1;
+					continue;
+				}
+			};
+			match self.library.refresh_folder(&at, &origin, &up) {
+				Some(r) => {
+					total = total.plus(r);
+					folders += 1;
+				}
+				None => missed += 1,
+			}
+		}
+		self.save_library();
+		// Nothing was read: "already up to date" would be a guess.
+		if folders == 0 {
+			return one.map_or("Directory not reached".into(), |name| format!("{name}: Directory not reached"));
+		}
+		let counts = if total.any() { format!("{} added, {} changed", total.added, total.updated) } else { "already up to date".into() };
+		let tail = if missed > 0 { format!(", {missed} not reached") } else { String::new() };
+		match one {
+			Some(name) => format!("{name}: {counts}{tail}"),
+			None => format!("Updated {folders} folders: {counts}{tail}"),
+		}
+	}
+
 	pub(crate) fn list_op(&mut self, op: &str, arg: Value) -> Result<Value, String> {
 		let station = |v: &Value| serde_json::from_value::<Station>(v.clone()).map_err(|e| e.to_string());
 		let place = || Place::of(&arg["place"]);
@@ -296,6 +356,45 @@ impl Core {
 				}
 				self.save_library();
 				json!(added)
+			}
+			// A Browse folder filed whole into a list, remembering where it came from.
+			"add_folder" => {
+				let at = dest(&place()?).ok_or("cannot add here")?;
+				let (key, name) = (arg["id"].as_str().ok_or("id")?.to_string(), arg["name"].as_str().unwrap_or_default().to_string());
+				let sources = self.sources.clone();
+				self.spawn(async move {
+					let got = sources.tree_up_to(&key, Sort::default(), ADD_CAP).await;
+					Done::Filed(at, Folder { name, origin: Some(key), ..Folder::default() }, got)
+				});
+				Value::Null
+			}
+			// Filed from a directory: Update from Directory applies.
+			"origin" => json!(dest(&place()?).and_then(|d| self.library.origin_at(&d)).is_some()),
+			// Update from Directory: this folder, or with no place every linked folder.
+			"update_folders" => {
+				let jobs = match arg.get("place") {
+					Some(_) => {
+						let at = dest(&place()?).ok_or("not a folder")?;
+						let origin = self.library.origin_at(&at).ok_or("Not filed from a directory")?;
+						vec![(at, origin)]
+					}
+					None => self.library.linked_folders(),
+				};
+				if jobs.is_empty() {
+					return Err("No folders filed from a directory".into());
+				}
+				let one = (jobs.len() == 1).then(|| self.dest_name(&jobs[0].0));
+				let message = format!("Updating {}", one.as_deref().unwrap_or("directory folders"));
+				let sources = self.sources.clone();
+				self.spawn(async move {
+					let mut done = Vec::new();
+					for (at, origin) in jobs {
+						let got = sources.tree_up_to(&origin, Sort::default(), ADD_CAP).await;
+						done.push((at, origin, got));
+					}
+					Done::Updated(done, one)
+				});
+				json!(message)
 			}
 			"destinations" => Value::Array(
 				self.library

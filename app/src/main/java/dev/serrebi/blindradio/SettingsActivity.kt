@@ -116,6 +116,7 @@ class SettingsActivity : Activity() {
         f.flag(R.string.timeshift, "timeshift.enabled")
         f.num(R.string.timeshift_minutes, "timeshift.minutes", 1, 240)
         f.num(R.string.seek_step, "timeshift.seek_step_seconds", 1, 600)
+        f.flag(R.string.keep_pitch, "keep_pitch")
         f.flag(R.string.encoded_ring, "timeshift.encoded_ring")
         f.num(R.string.encoded_mb, "timeshift.max_mb", 0, 2000)
 

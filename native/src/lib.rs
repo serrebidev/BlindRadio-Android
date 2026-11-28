@@ -21,12 +21,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use blindradio_core::Engine;
 use blindradio_core::import;
-use blindradio_core::library::Library;
+use blindradio_core::library::{Folder, Library, StationDest};
 use blindradio_core::output::{DeviceEvent, MixerCmd, Output, output_devices};
 use blindradio_core::record::WavSave;
 use blindradio_core::schedule::{Repeat, ScheduledRecording};
 use blindradio_core::segments::{Jump, Which};
-use blindradio_core::settings::{ChannelMode, EqPreset, EqSettings, Settings, StationEq};
+use blindradio_core::settings::{ChannelMode, EqPreset, EqSettings, MAX_SPEED, MIN_SPEED, Settings, StationEq};
 use blindradio_core::sleep::SleepTimer;
 use blindradio_core::sources::{Endpoints, Node, SearchQuery, Sort, SortField, Sources};
 use blindradio_core::station::{Source, Station};
@@ -97,9 +97,16 @@ impl Sink for Shared {
 }
 
 /// Work finished on the network runtime, handed back to the main thread by `poll`.
-enum Done {
+/// One folder's directory read: where it is filed, where it came from, what came back.
+pub(crate) type FolderRead = (StationDest, String, blindradio_core::Result<(Vec<Station>, Vec<Folder>)>);
+
+pub(crate) enum Done {
 	Starter(blindradio_core::Result<String>),
 	Out(Value),
+	/// A Browse folder read for Add folder to list: where it goes, the folder, its tree.
+	Filed(StationDest, Folder, blindradio_core::Result<(Vec<Station>, Vec<Folder>)>),
+	/// Update from Directory reads, and the folder name when only one.
+	Updated(Vec<FolderRead>, Option<String>),
 }
 
 pub struct Core {
@@ -207,6 +214,7 @@ impl Core {
 		output.send(MixerCmd::Mute(settings.muted));
 		output.send(MixerCmd::Eq(settings.eq.clone()));
 		output.send(MixerCmd::Hiss(settings.fm_sound));
+		output.send(MixerCmd::Speed { speed: settings.speed, keep_pitch: settings.keep_pitch });
 		let engine = Engine::new(&data.join(store::RESOLVE_FILE), output.sample_rate)?;
 		let rendered = output.rendered().clone();
 		let output = Rc::new(RefCell::new(output));
@@ -252,7 +260,7 @@ impl Core {
 		Ok(core)
 	}
 
-	fn spawn<F>(&self, work: F)
+	pub(crate) fn spawn<F>(&self, work: F)
 	where
 		F: Future<Output = Done> + Send + 'static,
 	{
@@ -303,6 +311,7 @@ impl Core {
 		b.apply();
 		self.mixer(MixerCmd::Buffers { start_ms: b.start_ms, refill_limit_ms: b.refill_limit_seconds * 1000 });
 		self.mixer(MixerCmd::Hiss(self.settings.fm_sound));
+		self.mixer(MixerCmd::Speed { speed: self.settings.speed, keep_pitch: self.settings.keep_pitch });
 		self.mixer(MixerCmd::Mute(self.settings.muted));
 		self.mixer(MixerCmd::Volume(self.settings.volume));
 		self.sources.set_disabled(self.settings.disabled_sources.clone());
@@ -322,6 +331,11 @@ impl Core {
 	fn set_volume(&mut self, points: i32) {
 		self.settings.volume = points.clamp(0, VOLUME_MAX_POINTS) as f32 / 100.0;
 		self.mixer(MixerCmd::Volume(self.settings.volume));
+		// Changing the volume means the listener wants to hear it: a muted app unmutes.
+		if self.settings.muted {
+			self.settings.muted = false;
+			self.mixer(MixerCmd::Mute(false));
+		}
 		if let Some(id) = self.tuner.playing().map(|p| p.id.clone()) {
 			self.settings.station_overrides.entry(id).or_default().volume = Some(self.settings.volume);
 		}
@@ -745,6 +759,14 @@ impl Core {
 					out.push(json!({ "k": "lists" }));
 				}
 				Done::Starter(Err(e)) => say(&mut out, format!("Starter list not loaded: {e}")),
+				Done::Filed(at, folder, got) => {
+					let text = self.filed(at, folder, got);
+					out.push(json!({ "k": "changed", "text": text }));
+				}
+				Done::Updated(done, one) => {
+					let text = self.updated(done, one);
+					out.push(json!({ "k": "changed", "text": text }));
+				}
 			}
 		}
 		// Radio Browser asks every app to report a play after a few seconds of sound.
@@ -896,6 +918,19 @@ impl Core {
 				self.mixer(MixerCmd::Mute(self.settings.muted));
 				self.save_settings();
 				json!(self.settings.muted)
+			}
+			"muted" => json!(self.settings.muted),
+			// Time-shift playback speed in steps of 0.05: faster catches up to live, slower falls behind.
+			"speed" => {
+				if let Some(delta) = arg["delta"].as_f64() {
+					self.settings.speed += delta as f32;
+				} else if let Some(v) = arg["set"].as_f64() {
+					self.settings.speed = v as f32;
+				}
+				self.settings.speed = ((self.settings.speed * 20.0).round() / 20.0).clamp(MIN_SPEED, MAX_SPEED);
+				self.mixer(MixerCmd::Speed { speed: self.settings.speed, keep_pitch: self.settings.keep_pitch });
+				self.save_settings();
+				json!(self.settings.speed)
 			}
 			"sleep" => {
 				let minutes = arg.as_u64().unwrap_or(0) as u32;

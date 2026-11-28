@@ -39,12 +39,14 @@ it. Without TalkBack, long press it (or hold OK on a TV remote).
 A station's actions:
 
 - Add to Favorites, or Remove from Favorites
-- Add to list: any of your lists or their folders
+- Add to list: any of your lists or their folders, picked as a tree: a list first, then a
+  folder inside it. Each level offers Put in this place first
 - Station details: genre, country, format, what is playing, address
 - Song history: what the station played lately
 - Open homepage, Copy stream address
 - Edit station (name, address, info), for stations in your lists
-- Station sound: this station's own equalizer, audio channels, song title delay, and song recognition
+- Station sound: this station's own equalizer, audio channels, song title delay, song recognition,
+  and Hide song titles from this station, for a station whose title changes too often to be useful
 - Schedule recording or alarm
 - Copy, Cut, Paste here, Move up, Move down, Delete (in your lists)
 
@@ -52,17 +54,27 @@ A folder's actions: Open, New folder, Paste into this folder, Copy folder, Cut
 folder, Paste folder into this folder, Rename, Move up, Move down, Delete, Export
 as playlist file, Export as folder of playlists. This list (in Menu) has Paste folder here too. In All Lists each list is a row with
 Show this list on the main screen, Rename, Move up, Move down, Delete and Export.
+A list or folder filed from a directory also has Update from directory: it reads the
+directory folder again. New stations arrive in the same subfolders and a station whose
+address changed follows it. Nothing is removed, and names you gave stations are kept.
+This list (in Menu) has Update directory folders, for every such folder at once.
+
+A Browse folder's actions: Open, and Add folder to list, which files the whole folder with
+its subfolders in a list or folder you pick, linked to its directory for Update from directory.
 
 The now-playing line at the top is a control too. Double tap it to pause or play.
 Its TalkBack actions (or a long press) are the player: Stop, Back and Forward,
-Go live, Previous and Next station, Volume up and down, Mute, Record, Song
-history, and Say what is playing.
+Go live, Previous and Next station, Volume up and down, Faster and Slower, Mute,
+Record, Song history, and Say what is playing. Changing the volume while muted unmutes.
 
 ## The four buttons
 
 - Lists: pick which list the main screen shows (Favorites, Recent, All Lists,
   SerrebiRadio, Custom Stations, your own lists). Also New list, Add station by
   address, Detect streams on a web page, including relative stream paths in player scripts.
+  Both start with the address on the clipboard when it holds one whole web address.
+  Detection follows a site's Listen Live links and pop-up players, and reads Triton
+  (player.listenlive.co) and SecureNet players, used by many North American stations.
   You can also detect streams from YouTube, Twitch, and Football360 live links, and
   from MPEG-TS links on pages. Football360 playback requires access to the provider's feed.
   Play or file the results.
@@ -71,7 +83,9 @@ history, and Say what is playing.
 - Search: every directory at once, by station name. Menu, Search filters adds
   genre, country, language and sort.
 - Browse: Radio Browser, TuneIn, iHeartRadio, SHOUTcast, Icecast, Live365 and the
-  rest, folder by folder. Menu, Sort changes a directory's order.
+  rest, folder by folder. Menu, Sort changes a directory's order. Networks is sorted
+  by language: English, Polish (with Polska from rstreams.ovh, the licensed Polish
+  stations on air) and Russian (Radio Record).
 - Menu: everything else, below.
 
 Back goes up one level. Playback keeps going with the screen off or in another
@@ -91,7 +105,9 @@ folders. Export as playlist file keeps folders too.
 
 - Player: the same commands as the now-playing line.
 - Time-shift: Pause or resume, Back and Forward by the seek step, Start of buffer,
-  Go live, Previous and Next song in the buffer.
+  Go live, Previous and Next song in the buffer, Faster, Slower and Normal speed.
+  Speed runs from 0.5x to 2x in steps of 0.05. Faster catches up on a program you
+  went back in, then plays live at normal speed; slower falls behind live.
 - Recording: Record or Stop recording, Pause recording, Record songs as separate
   files, Save the whole buffer, Save this song, Save the previous song, Save every
   song in the buffer, and Where are my recordings. Recordings go to Music/BlindRadio
@@ -128,8 +144,8 @@ day; Report plays to Radio Browser.
 
 Playback: FM sound between stations; Audio channels; Start buffer; Refill limit
 after dropouts; HLS segments behind live; Time-shift buffer on or off, its
-minutes (5 by default on Android: each minute holds about 11 MB of memory) and
-the seek step. Or keep the buffer as the station sends it: hours of audio in a
+minutes (5 by default on Android: each minute holds about 11 MB of memory),
+the seek step, and Speed keeps the pitch (off is tape speed, pitch follows speed). Or keep the buffer as the station sends it: hours of audio in a
 size you set (200 MB by default).
 
 Recording: format (as the station sends it, MP3, WAV, FLAC), MP3 bitrate and

@@ -8,8 +8,8 @@ android {
         // Android 10 (TV and phone) through Android 17.
         minSdk = 29
         targetSdk = 37
-        versionCode = 18
-        versionName = "0.3.16"
+        versionCode = 19
+        versionName = "0.3.20"
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
     }
     ndkVersion = "27.3.13750724"

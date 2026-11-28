@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.20
+
+- Playback speed for the time-shift buffer, 0.5x to 2x: Faster, Slower and Normal speed in Menu, Time-shift, and Faster and Slower on the now-playing line. Faster catches up on a program you went back in, then plays live at normal speed. Slower falls behind live. Voices keep their pitch; Settings, Speed keeps the pitch off switches to tape speed.
+- Station sound has Hide song titles from this station, for a station whose title changes too often to be useful.
+- Changing the volume while muted unmutes and says so.
+- Browse folders have Add folder to list: the whole folder with its subfolders goes into a list or folder you pick.
+- Update from directory, on a list or folder filed from a directory, reads it again: new stations arrive in the same subfolders and changed addresses are followed. Nothing is removed. This list, Update directory folders does every such folder at once.
+- Add to list and Add folder to list pick the destination as a tree: a list first, then a folder inside it.
+- Add station and Detect streams start with the address on the clipboard when it holds one whole web address.
+- Networks in Browse is sorted by language: English, Polish and Russian. Radio Record is under Russian.
+- New under Polish: Polska (rstreams.ovh), the licensed Polish stations on air, in their author's groups. Search finds them by name.
+- Detect streams follows a site's Listen Live links and pop-up players, and reads Triton (player.listenlive.co) and SecureNet players, used by many North American stations.
+- The version number matches BlindRadio for desktop.
+
 ## 0.3.16
 
 - Menu, Report an issue on GitHub asks for a title and a description, then opens GitHub's new issue page with both filled in and your BlindRadio version and device added. Sign in on GitHub and press Create.

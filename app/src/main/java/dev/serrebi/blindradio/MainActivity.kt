@@ -535,7 +535,7 @@ class MainActivity : Activity() {
     private fun addStation() {
         val f = Form(this)
         val name = f.text(getString(R.string.name), "")
-        val url = f.text(getString(R.string.address), "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
+        val url = f.text(getString(R.string.address), clipUrl(), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI)
         AlertDialog.Builder(this)
             .setTitle(R.string.add_station)
             .setView(f.scroll)
@@ -552,8 +552,15 @@ class MainActivity : Activity() {
             .show()
     }
 
+    /** The clipboard when it holds one whole web address, for an address field to start with. */
+    private fun clipUrl(): String {
+        val text = getSystemService(ClipboardManager::class.java).primaryClip?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)?.coerceToText(this)?.toString()?.trim().orEmpty()
+        return if (Regex("^https?://\\S+$", RegexOption.IGNORE_CASE).matches(text)) text else ""
+    }
+
     /** Detect Audio Stream on Page: a web page, or a YouTube or Twitch link, to its streams. */
-    private fun detect() = askText(getString(R.string.detect), getString(R.string.page_address), "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI) { url ->
+    private fun detect() = askText(getString(R.string.detect), getString(R.string.page_address), clipUrl(), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI) { url ->
         if (url.isEmpty()) return@askText
         say(getString(R.string.loading))
         Engine.call("detect", url)
@@ -563,6 +570,7 @@ class MainActivity : Activity() {
     private fun onEvent(e: JSONObject) {
         when (e.getString("k")) {
             "say", "title" -> say(e.getString("text"))
+            "changed" -> { say(e.getString("text")); reload() }
             "saved" -> {
                 say(e.getString("text"))
                 val paths = e.optJSONArray("paths")?.strings().orEmpty()
@@ -689,6 +697,7 @@ class MainActivity : Activity() {
         is Row.Station -> stationActions(pos, r)
         is Row.Lib -> libActions(r)
         is Row.Item -> scheduleActions(r)
+        is Row.Folder -> listOf(getString(R.string.open) to { openBrowse(r.id, r.name) }, getString(R.string.add_folder_to_list) to { addFolderToList(r) })
         else -> emptyList()
     }
 
@@ -782,6 +791,7 @@ class MainActivity : Activity() {
                 }
             }
         }
+        if (Engine.call("origin", JSONObject().put("place", r.place)) == true) out += getString(R.string.update_from_directory) to { updateFolders(r.place) }
         out += getString(R.string.export_list) to { export(r.place, r.name) }
         out += getString(R.string.export_folder) to { exportFolder(r.place) }
         return out
@@ -835,13 +845,55 @@ class MainActivity : Activity() {
         reload()
     }
 
-    private fun addToList(s: JSONObject) {
-        val dests = (Engine.call("destinations") as JSONArray).objects()
-        choose(getString(R.string.add_to_list), dests.map { it.getString("name") }) { i ->
-            val added = Engine.call("add_to", JSONObject().put("place", dests[i].getJSONObject("place")).put("station", s)) == true
-            act(getString(if (added) R.string.added_to else R.string.already_there, dests[i].getString("name")))
-            reload()
+    private fun addToList(s: JSONObject) = pickDestination(getString(R.string.add_to_list)) { place, name ->
+        val added = Engine.call("add_to", JSONObject().put("place", place).put("station", s)) == true
+        act(getString(if (added) R.string.added_to else R.string.already_there, name))
+        reload()
+    }
+
+    /** A Browse folder filed whole, its subfolders kept; Update from Directory can follow it later. */
+    private fun addFolderToList(r: Row.Folder) = pickDestination(getString(R.string.add_folder_to_list)) { place, _ ->
+        say(getString(R.string.adding, r.name))
+        Engine.call("add_folder", JSONObject().put("place", place).put("id", r.id).put("name", r.name))
+        Engine.schedule()
+    }
+
+    private fun updateFolders(place: JSONObject?) {
+        try {
+            say(Engine.call("update_folders", JSONObject().apply { if (place != null) put("place", place) }) as String)
+            Engine.schedule()
+        } catch (e: EngineError) {
+            say(e.message ?: "")
         }
+    }
+
+    /**
+     * Where to put something, as a tree: the lists first, then a list's folders, and so on.
+     * A level offers its own place first; a place without folders is picked at once.
+     */
+    private fun pickDestination(title: String, pick: (JSONObject, String) -> Unit) {
+        val dests = (Engine.call("destinations") as JSONArray).objects()
+        fun path(d: JSONObject) = d.getJSONObject("place").optJSONArray("path")?.let { a -> List(a.length()) { a.getInt(it) } }.orEmpty()
+        fun list(d: JSONObject) = d.getJSONObject("place").getString("list")
+        fun children(of: JSONObject?) = dests.filter { d ->
+            if (of == null) path(d).isEmpty()
+            else list(d) == list(of) && path(d).size == path(of).size + 1 && path(d).take(path(of).size) == path(of)
+        }
+        fun level(of: JSONObject?) {
+            val kids = children(of)
+            val rows = (if (of != null) listOf(getString(R.string.put_here, of.getString("name"))) else emptyList()) +
+                kids.map { if (children(it).isEmpty()) it.getString("name") else getString(R.string.folder_more, it.getString("name")) }
+            choose(of?.getString("name") ?: title, rows) { i ->
+                val at = if (of != null) i - 1 else i
+                if (at < 0) {
+                    pick(of!!.getJSONObject("place"), of.getString("name"))
+                    return@choose
+                }
+                val d = kids[at]
+                if (children(d).isEmpty()) pick(d.getJSONObject("place"), d.getString("name")) else level(d)
+            }
+        }
+        level(null)
     }
 
     private fun showDetails(s: JSONObject) {
@@ -904,6 +956,7 @@ class MainActivity : Activity() {
             choose(getString(R.string.recognize), recLabels, recAt) { recAt = it; b.text = "${getString(R.string.recognize)}: ${recLabels[it]}" }
         }
         val delay = f.number(getString(R.string.title_delay), o.optInt("metadata_offset_seconds", 0))
+        val hideTitles = f.check(getString(R.string.hide_titles), o.optBoolean("hide_titles"))
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.station_sound) + ": " + s.optString("name"))
             .setView(f.scroll)
@@ -913,6 +966,7 @@ class MainActivity : Activity() {
                 o.put("recognition", when (recAt) { 0 -> JSONObject.NULL; 1 -> true; else -> false })
                 val d = delay.text.toString().toIntOrNull()?.coerceIn(-60, 60) ?: 0
                 o.put("metadata_offset_seconds", if (d == 0) JSONObject.NULL else d)
+                o.put("hide_titles", hideTitles.isChecked)
                 Engine.call("set_station_settings", JSONObject().put("id", id).put("settings", o))
                 act(getString(R.string.saved))
             }
@@ -1004,8 +1058,10 @@ class MainActivity : Activity() {
         out += getString(R.string.go_live) to { Engine.run("live") }
         out += getString(R.string.prev_station) to { Engine.run("prev_station") }
         out += getString(R.string.next_station) to { Engine.run("next_station") }
-        out += getString(R.string.volume_up) to { act(getString(R.string.volume_n, (Engine.call("volume", JSONObject().put("delta", 5)) as Number).toInt())) }
-        out += getString(R.string.volume_down) to { act(getString(R.string.volume_n, (Engine.call("volume", JSONObject().put("delta", -5)) as Number).toInt())) }
+        out += getString(R.string.volume_up) to { volumeBy(5) }
+        out += getString(R.string.volume_down) to { volumeBy(-5) }
+        out += getString(R.string.faster) to { speedBy(0.05) }
+        out += getString(R.string.slower) to { speedBy(-0.05) }
         out += getString(R.string.mute) to { act(getString(if (Engine.call("mute") == true) R.string.muted else R.string.unmuted)) }
         out += getString(if (recording()) R.string.stop_recording else R.string.record) to { Engine.run("record") }
         if (p != null) out += getString(R.string.history) to { Engine.call("history", p); Engine.schedule() }
@@ -1014,6 +1070,20 @@ class MainActivity : Activity() {
     }
 
     private fun player() = commands(getString(R.string.player), playerCommands())
+
+    /** Changing the volume unmutes: the listener wants to hear it. */
+    private fun volumeBy(delta: Int) {
+        val wasMuted = Engine.call("muted") == true
+        val v = (Engine.call("volume", JSONObject().put("delta", delta)) as Number).toInt()
+        act(getString(if (wasMuted) R.string.unmuted_volume_n else R.string.volume_n, v))
+    }
+
+    /** Time-shift speed, 0.5x to 2x: faster catches up to live, slower falls behind it. Null = normal. */
+    private fun speedBy(delta: Double?) {
+        val arg = if (delta == null) JSONObject().put("set", 1.0) else JSONObject().put("delta", delta)
+        val v = (Engine.call("speed", arg) as Number).toDouble()
+        act(getString(R.string.speed_n, String.format(java.util.Locale.ROOT, "%.2f", v)))
+    }
 
     private fun menu() {
         val out = ArrayList<Pair<String, () -> Unit>>()
@@ -1042,6 +1112,9 @@ class MainActivity : Activity() {
         getString(R.string.go_live) to { Engine.run("live") },
         getString(R.string.prev_song) to { Engine.run("segment", false) },
         getString(R.string.next_song) to { Engine.run("segment", true) },
+        getString(R.string.faster) to { speedBy(0.05) },
+        getString(R.string.slower) to { speedBy(-0.05) },
+        getString(R.string.normal_speed) to { speedBy(null) },
     ))
 
     private fun recordingMenu() {
@@ -1088,6 +1161,7 @@ class MainActivity : Activity() {
             if (folderClip != null) out += getString(R.string.paste_folder) to { pasteFolder(here) }
         }
         out += getString(R.string.new_list) to { newList() }
+        out += getString(R.string.update_directory_folders) to { updateFolders(null) }
         out += getString(R.string.import_playlist) to { importPlaylist() }
         out += getString(R.string.import_folder) to { importFolder() }
         val exportPlace = cur.place ?: place(mainListId).takeIf { cur.kind == Kind.MAIN }
@@ -1161,7 +1235,9 @@ class MainActivity : Activity() {
         val f = Form(this)
         val v = (Engine.call("volume", JSONObject()) as Number).toInt()
         f.slider(getString(R.string.volume), 0, 200, v, { getString(R.string.percent, it) }) {
+            val wasMuted = Engine.call("muted") == true
             Engine.call("volume", JSONObject().put("set", it))
+            if (wasMuted) act(getString(R.string.unmuted))
         }
         AlertDialog.Builder(this).setTitle(R.string.volume).setView(f.scroll).setPositiveButton(R.string.close, null).show()
     }
